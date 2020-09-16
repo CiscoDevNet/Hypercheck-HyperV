@@ -1,0 +1,65 @@
+	 Test Info
+	VHXTool 1.0
+	
+1) Cluster services check:
+-------------------------
+1) Check Cluster State: It will check cluster state(online or offline).
+2) Check Cluster HealthState: It will check cluster health-state(healthy or unhealthy).
+3) Check Services: It will check the services(Springpath File System, SCVM Client, System Management Service, Cluster IP Monitor) are running or not.
+4) Check Space State:
+5) Check Enospc State: Checks if the cluster storage utilization is above threshold.
+6) Check Cleaner Info:
+7) Check Replication Factor: 
+
+
+2) ZooKeeper and Exhibitor check:
+--------------------------------
+1) Check Exhibitor Mode: It will check mode is follower or leader or standalone.
+2) Check Current ensemble size: 
+3) Check Services: It will check exhibitor service is running or not.
+4) Check exhibitor.properties file: It will check exhibitor.properties file exists or not.
+5) Check Accepted Epoch value:
+6) Check Current Epoch value:
+7) Check System Disks Usage: Checks if /sda1, var/stv and /var/zookeeper is less than 80%.
+
+
+3) HDD Health check:
+-------------------
+1) Check Claimed Disks: It will check number of claimed disks.
+2) Check Blacklisted Disks: It will check number of blacklisted disks.
+3) Check Ignored Disks: It will check number of ignored disks.
+
+
+4) Pre-Upgrade check:
+--------------------
+1) Check HX Cluster version: It will display the HX Cluster version.
+2) Check NTP deamon running: It will check NTP deamon service is running or not.
+3) NTP sync check: Checks if the NTP is synced with NTP server.
+4) DNS check: It will check the DNS IP is reachable or not.
+5) Timestamp check: It will check timestamp of all cluster nodes are same or not.
+6) Primary NTP Source check: It will check all cluster NTP IP address is same or not.
+7) Check Cluster Fault Tolerance: It will check Node, HDD & SSD Fault Tolerance.
+8) Check Cache vNodes: It will check cashe is spread across all controllers.
+9) Check No extra pnodes: It will check the number pnodes and the number cluster of cluster nodes are same or not.
+10) Check package & versions: It will display the list of packages and its versions.
+11) Check Iptables count: Checks if the IP Table count matches on all nodes.
+12) Check Memory usage: Checks for available memory more than 2GB.
+13) Check CPU: It will display the CPU usage info.
+14) Incidence of OOM in the log file: Checks for any previous incidence of Out Of Memory Condition.
+15) Check permissions for /tmp: It will check if the /tmp permissions are set correctly.
+16) Cluster Policy check: It will check cluster policy is Lenient or Strict.
+17) Check CMIP hostname: Check if the clustermanagementip has hostname defined.
+18) Check domain join health: Checking domain join health of the Node.
+
+
+5) Hyper-V check:
+----------------
+1) Check Hostname: Check if the hostname is defined.   
+2) Check Cluster Failover: Check if the Failover Cluster Manager feature is installed.
+3) Check Hyper-V Role: Check if the Hyper-V Manager feature is installed.
+4) Check Remote Management Enabled: Check if the Remote Management is enabled on the node. 
+5) Check the Domain and forest details: Checking the Domain and forest details of the cluster. 
+6) Check host file entries: Check if the host file have correct entries.
+7) Check Adapter details: Check Adapter details of the node.   
+8) SMB Test: Checking SMB reachability of node.
+9) Virtual Machine Management service check: Checking if VMMS service is Up and Running.
