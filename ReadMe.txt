@@ -1,3 +1,5 @@
+This Hypercheck Tool is for ONLY for HyperV Hyperflex Cluster
+
 Supported HX Versions
 : 
 3.0, 
@@ -21,7 +23,7 @@ When to use?
 Pre-requisite to use the tool:  
 1) The Windows Remote Management (WS-Managemnet) should be enabled on each Hyper-V Server.
 2) Script needs Hyper-V Admin Username and Password, and HX root password information to check all conditions
-Prerequisites : Enable Enable-PSRemoting –force on  all nodes
+Prerequisites : Enable Enable-PSRemoting â€“force on  all nodes
 
 How to run the tool?
 Steps:
