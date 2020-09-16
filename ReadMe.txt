@@ -23,7 +23,7 @@ When to use?
 Pre-requisite to use the tool:  
 1) The Windows Remote Management (WS-Managemnet) should be enabled on each Hyper-V Server.
 2) Script needs Hyper-V Admin Username and Password, and HX root password information to check all conditions
-Prerequisites : Enable Enable-PSRemoting –force on  all nodes
+
 
 How to run the tool?
 Steps:
@@ -36,11 +36,9 @@ Steps:
 
 4) Enter the Hyper-V Admin Username.
 5) Enter the Hyper-V Admin password.
-6) Enter the HX root password.
+6) Enter the HX-Cluster Root Password
 7) Is the Active Directory installed on Physical (bare metal) in your Environment (Enter Yes/No).
 8) Script will display the result on the console and also creates each node report(VHX Report 10.197.252.79.txt) and main report txt file(VHX Tool Main Report.txt) in the VHX_Report_<timestamp> folder.
 
 
-Troubleshoot:
-If you see any ImportError: cannot import winrm.protocol, then please install the pywinrm module. By default it will be available in the HX Cluster Python modules.
-	> pip install pywinrm
+
