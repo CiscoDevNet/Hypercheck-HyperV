@@ -1,2 +1,0 @@
-# Hypercheck-HyperV
-
