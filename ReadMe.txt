@@ -1,21 +1,18 @@
 This Hypercheck Tool is for ONLY for HyperV Hyperflex Cluster
 
-Supported HX Versions
-: 
-3.0, 
-3.5.
-Supported HX Clusters
-: Hyperflex Standard Cluster, Hyperflex Edge Cluster (3N and 4N ROBO), Only supported on Hyperflex cluster on Hyper-V Server.
+Supported HX Versions : 3.0, 3.5, 4.0
+
+Supported HX Clusters: Only supported on Hyperflex cluster on Hyper-V Nodes.
 
 
 When to use?
     
-* Before an Hyperflex upgrade
-.
+* Before a Hyperflex upgrade
+
 * Health Check before and after Maintenance Windows
-. 
+ 
 * When working with TAC and/or Opening a TAC case
-.    
+    
 * Recommended that you provide the output from the tool while opening a TAC case.
 
 
