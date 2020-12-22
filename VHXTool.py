@@ -1,39 +1,39 @@
 # -*- coding: utf-8 -*-
 """
-VHXTool v1.0
-Created on 12-Mar-2020
-Updated on 4-Sep-2020
-@author: Kiranraj(kjogleka), Afroj(afrahmad), Himanshu(hsardana), Komal(kpanzade), Avinash(avshukla)
+Created on 9-Mar-2018
+Updated on 21-Dec-2020
+@author: Kiranraj(kjogleka), Himanshu(hsardana), Komal(kpanzade), Avinash(avshukla), Afroj(afrahmad)
 """
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 import subprocess
-import threading
 import paramiko
+import threading
 import time
 import datetime
-import logging
+import logging 
 import sys
 import os
-import json
 import shutil
 import getpass
 import re
+import json
 import tarfile
 from prettytable import PrettyTable, ALL
 from collections import OrderedDict
 from progressbar import ProgressBarThread
-from winrm.protocol import Protocol
-from base64 import b64encode
+from multiprocessing import Process
+
+# Global Variables
+toolversion = 4.1
+builddate = "2020-12-21"
+sedNote = False
+lsusbCheck = False
 
 ########################       Logger        #################################
 INFO = logging.INFO
 DEBUG = logging.DEBUG
 ERROR = logging.ERROR
-
-# Global Variable
-toolversion = 1.0
-builddate = "2020-9-4"
 
 
 def get_date_time():
@@ -44,7 +44,7 @@ def log_start(log_file, log_name, lvl):
     # Create a folder
     cdate = datetime.datetime.now()
     global dir_name
-    dir_name = "VHX_Report_" + str(cdate.strftime("%Y_%m_%d_%H_%M_%S"))
+    dir_name = "HX_Report_" + str(cdate.strftime("%Y_%m_%d_%H_%M_%S"))
     try:
         os.makedirs(dir_name)
     except FileExistsError:
@@ -56,29 +56,29 @@ def log_start(log_file, log_name, lvl):
     log_level = lvl
     logger = logging.getLogger(log_name)
     logger.setLevel(log_level)
-
+    
     # Create a file handler
     handler = logging.FileHandler(log_file)
     handler.setLevel(log_level)
-
+    
     # Create a logging format
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %I:%M:%S')
     handler.setFormatter(formatter)
-
+    
     # Add the handlers to the logger
     logger.addHandler(handler)
-    msg = "VHX Checkup Tool Started at Date/Time :" + get_date_time().replace("_", "/")
+    msg = "HX Checkup Tool Started at Date/Time :" + get_date_time().replace("_", "/") + "\r"
     global start_time
     start_time = datetime.datetime.now()
     logger.info(msg)
-    # log_msg("", msg)
-    logger.info("Logger Initialized")
+    #log_msg("", msg)
+    logger.info("Logger Initialized\r")
 
 
 def log_stop():
     # Exit the logger and stop the script, used for traceback error handling
-    log_msg(INFO, "Closing logger and exiting the application")
-    msg = "VHX Checkup Tool Stopped at Date/Time :" + get_date_time().replace("_", "/")
+    log_msg(INFO, "Closing logger and exiting the application\r")
+    msg = "HX Checkup Tool Stopped at Date/Time :" + get_date_time().replace("_", "/") + "\r"
     log_msg(INFO, msg)
     end_time = datetime.datetime.now()
     time_diff = end_time - start_time
@@ -89,26 +89,26 @@ def log_stop():
 
 def log_entry(cmd_name):
     # Each function will call this in the beginning to enter any DEBUG info
-    logger.log(DEBUG, 'Entered command :' + cmd_name)
+    logger.log(DEBUG, 'Entered command :' + cmd_name + "\r")
 
 
 def log_exit(cmd_name):
     # Each function will call this in the end, to enter any DEBUG info
-    logger.log(DEBUG, 'Exited command :' + cmd_name)
+    logger.log(DEBUG, 'Exited command :' + cmd_name + "\r")
 
 
 def log_msg(lvl, *msgs):
     # Each function will call this to enter any INFO msg
     msg = ""
-    if len(msgs) > 1:
+    if len(msgs)>1:
         for i in msgs:
-            msg = msg + str(i) + "\n"
-        msg.rstrip("\n")
+            msg = msg + str(i) + "\r\n"
+        msg.rstrip("\r\n")
     else:
         for i in msgs:
             msg = msg + str(i)
     # Print on Console & log
-    for line in msg.split("\n"):
+    for line in msg.split("\r\n"):
         if lvl == "" and line != "":
             print(line)
         elif line != "":
@@ -116,7 +116,7 @@ def log_msg(lvl, *msgs):
 
 
 def sys_exit(val):
-    # End the script
+    # Shutdown the logger handler
     try:
         log_stop()
     except Exception:
@@ -124,34 +124,30 @@ def sys_exit(val):
     sys.exit(val)
 
 
-def check(l):
-    # ASCII Error handler
-    return "".join(filter(lambda x: ord(x)<128, l))
-
-####################           COMMANDS            #####################
+####################           SSH connection            #####################
 
 
 def runcmd(cmd):
     # Execute local shell command
     log_entry(cmd)
-    log_msg(INFO, "$" * 61)
-    log_msg(INFO, "\nExecuting Shell command: " + cmd)
+    log_msg(INFO, "$" * 61 + "\r")
+    log_msg(INFO, "\r\nExecuting Shell command: " + cmd + "\r")
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     cmdoutput, err = p.communicate()
     p_status = p.wait()
     output = cmdoutput.split("\n")
-    log_msg(INFO, "*" * 24 + " CMD OUTPUT " + "*" * 24)
+    log_msg(INFO, "*" * 24 + " CMD OUTPUT " + "*" * 24 + "\r")
     for line in output:
-        log_msg(INFO, str(line))
-    log_msg(INFO, "*" * 61)
+        log_msg(INFO, str(line) + "\r")
+    log_msg(INFO, "*" * 61 + "\r")
     return cmdoutput
 
 
 def execmd(cmd):
-    # Execute SSH command
+    # Execute command 
     log_entry(cmd)
-    log_msg(INFO, "#" * 61)
-    log_msg(INFO, "\nExecuting command: " + cmd)
+    log_msg(INFO, "#" * 61 + "\r")
+    log_msg(INFO, "\r\nExecuting command: " + cmd + "\r")
     stdin, stdout, stderr = client.exec_command(cmd)
     while not stdout.channel.exit_status_ready():
         time.sleep(1)
@@ -163,121 +159,82 @@ def execmd(cmd):
     else:
         for line in stderr:
             output.append(line.strip())
-        output.insert(0, "Not able to run the command")
-    log_msg(INFO, "*" * 24 + " CMD OUTPUT " + "*" * 24)
+        output.insert(0,"Not able to run the command")
+    log_msg(INFO, "*"*24 + " CMD OUTPUT " + "*"*24 + "\r")
     for line in output:
-        try:
-            log_msg(INFO, line)
-        except Exception:
-            log_msg(INFO, check(line))
-    log_msg(INFO, "*" * 61)
+        log_msg(INFO, line +"\r")
+    log_msg(INFO, "*" * 61 + "\r")
     log_exit(cmd)
     return output
 
 
-def rpscmd(cmd):
-    # Execute remote Power shell command
-    log_msg(INFO, "\n" + "*" * 25 + "  EXE RPS CMD  " + "*" * 25)
-    log_msg(INFO, "> " + cmd)
-    output = []
-    shell_id = psClient.open_shell()
-    enc_cmd = b64encode(cmd.encode('utf_16_le')).decode('ascii')
-    ps_cmd = 'powershell -encodedcommand {0}'.format(enc_cmd)
-    command_id = psClient.run_command(shell_id, ps_cmd)
-    std_out, std_err, status_code = psClient.get_command_output(shell_id, command_id)
-    # status_code 0 for success
-    if status_code == 0:
-        sop = std_out.decode("utf-8").strip()
-        output = sop.split("\r\n")
-        output = map(str, output)
-        log_msg(INFO, "\n" + "*" * 25 + "  CMD OUTPUT   " + "*" * 25)
-        for ln in output:
-            log_msg(INFO, str(ln))
-        log_msg(INFO, "*" * 65)
-    else:
-        log_msg(INFO, "\n" + "*" * 25 + "  CMD OUTPUT   " + "*" * 25)
-        log_msg(INFO, "Error")
-        log_msg(INFO, "*" * 65)
-    psClient.cleanup_command(shell_id, command_id)
-    psClient.close_shell(shell_id)
-    return output
-
-########################################################################
-
-
-def check_hyperv_psd(hostiplist, wdusername, wdpassword):
-    log_msg(INFO, "\nChecking HyperV Password")
-    rsList = []
-    for hostip in hostiplist:
-        try:
-            url = "https://" + hostip + ":5986/wsman"
-            global psClient
-            psClient = Protocol(endpoint=url, transport="ntlm", username=wdusername, password=wdpassword, server_cert_validation="ignore")
-            cmd = "hostname"
-            op = rpscmd(cmd)
-            if op:
-                log_msg(INFO, "Host Name: " + str(op[0]))
-            log_msg(INFO, "\nValid HyperV password")
-            rsList.append("PASS")
-            break
-        except Exception as e:
-            log_msg(INFO, "Not able to connect remote Hyper-V host: " + str(hostip))
-            log_msg("", "\nNot able to connect remote Hyper-V host: " + str(hostip))
-            log_msg(INFO, "Invalid Hyper-V password or enable remote powershell")
-            log_msg(INFO, "Restart the Windows Remote management service(WinRM) and Re-run the script. Also make sure the Domain and username used is correct")
-            #log_msg("", "\nInvalid Hyper-V password or enable remote powershell")
-            log_msg("", "\nRestart the Windows Remote management service(WinRM) and Re-run the script. Also make sure the Domain and username used is correct")
-            log_msg(ERROR, str(e))
-            rsList.append("FAIL")
-            continue
-    if "PASS" not in rsList:
-        sys_exit(0)
-
-def check_hx_psd(ip, hxusername, hxpassword, time_out):
-    log_msg(INFO, "\nChecking the HX root password")
+def check_psd(ips, hxusername, hxpassword, esxpassword, time_out):
+    log_msg(INFO, "\r\nChecking the HX root password\r")
+    ip = ips[0]
+    esxip = ""
     try:
         # Initiate SSH Connection
         client.connect(hostname=ip, username=hxusername, password=hxpassword, timeout=time_out)
-        msg = "\nSSH connection established to HX Node: " + ip
+        msg = "\r\nSSH connection established to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
-        cmd = "hostname"
+        # Get ESX IP
+        cmd = "/opt/springpath/storfs-mgmt-cli/getLocalNode.sh | grep 'esxiIP=' | cut -d= -f2"
         op = execmd(cmd)
-        log_msg(INFO, "\nValid HX root password")
+        if "Not able to run the command" not in op:
+            esxip = str(op[0]).strip()
+        log_msg(INFO, "\r\nValid HX root password\r")
     except Exception as e:
-        msg = "\nNot able to establish SSH connection to HX Node: " + ip
+        msg = "\r\nNot able to establish SSH connection to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
         log_msg("", msg)
-        log_msg(INFO, "\nInvalid HX root password")
-        log_msg("", "\nInvalid HX root password")
-        log_msg(ERROR, str(e))
+        log_msg(ERROR, str(e) + "\r")
+        log_msg(INFO, "\r\nInvalid HX root password\r")
+        log_msg("", "\r\nInvalid HX root password\r")
         sys.exit(0)
+
+    if esxip != "":
+        log_msg(INFO, "\r\nChecking the ESX root password\r")
+        try:
+            # Initiate SSH Connection
+            client.connect(hostname=esxip, username=hxusername, password=esxpassword, timeout=time_out)
+            msg = "\r\nSSH connection established to ESX Host: " + esxip + "\r"
+            log_msg(INFO, msg)
+            log_msg(INFO, "\r\nValid ESX root password\r")
+        except Exception as e:
+            msg = "\r\nNot able to establish SSH connection to ESX Host: " + esxip + "\r"
+            log_msg(INFO, msg)
+            log_msg("", msg)
+            log_msg(ERROR, str(e) + "\r")
+            log_msg(INFO, "\r\nInvalid ESX root password\r")
+            log_msg("", "\r\nInvalid ESX root password\r")
+            sys.exit(0)
 
 
 def thread_geteth0ip(ip, hxusername, hxpassword, time_out):
     try:
         # Initiate SSH Connection
         client.connect(hostname=ip, username=hxusername, password=hxpassword, timeout=time_out)
-        msg = "\nSSH connection established to HX Node: " + ip
+        msg = "\r\nSSH connection established to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
+        #log_msg("", msg)
+        #cmd = "hostname -i"
         cmd = "ifconfig eth0 | grep 'inet addr:' | cut -d: -f2| cut -d' ' -f1"
         hxip = execmd(cmd)
-        hxips.extend(hxip)
+        eth0_list.extend(hxip)
         client.close()
     except Exception as e:
-        msg = "\nNot able to establish SSH connection to HX Node: " + ip
+        msg = "\r\nNot able to establish SSH connection to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
         log_msg("", msg)
-        log_msg(ERROR, str(e))
+        log_msg(ERROR, str(e) + "\r")
 
 
 def thread_sshconnect(ip, hxusername, hxpassword, time_out):
-    hostd[str(ip)] = dict.fromkeys(
-        ["hostname", "date", "ntp source", "package & versions", "check package & versions", "eth0", "eth1", "eth1mtu",
-         "iptables count", "cmip", "cdip", "crmaster", "check iptables"], "")
+    hostd[str(ip)] = dict.fromkeys(["hostname", "date", "ntp source", "package & versions", "check package & versions", "eth1", "esxip" "vmk0", "vmk1", "iptables count", "check iptables", "keystore"], "")
     try:
         # Initiate SSH Connection
         client.connect(hostname=ip, username=hxusername, password=hxpassword, timeout=time_out)
-        msg = "\nSSH connection established to HX Node: " + ip
+        msg = "\r\nSSH connection established to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
         log_msg("", msg)
         # Check hostname
@@ -286,93 +243,65 @@ def thread_sshconnect(ip, hxusername, hxpassword, time_out):
             hname = execmd(cmd)
             hostd[ip]["hostname"] = ("".join(hname)).encode("ascii", "ignore")
         except Exception as e:
-            log_msg(ERROR, str(e))
+            log_msg(ERROR, str(e) + "\r")
         # Check NTP source
         try:
             cmd = "stcli services ntp show"
             hntp = execmd(cmd)
-            hntp = [i for i in hntp if "-" not in i]
-            hostd[ip]["ntp source"] = ("".join(hntp)).encode("ascii", "ignore")
+            hntp = [i for i in hntp if "----" not in i]
+            hostd[ip]["ntp source"] = (",".join(hntp)).encode("ascii", "ignore")
         except Exception as e:
-            log_msg(ERROR, str(e))
+            log_msg(ERROR, str(e) + "\r")
         # check package and versions
         try:
-            cmd = "dpkg -l | grep -i springpath | cut -d' ' -f3,4-"
+            #cmd = "dpkg -l | grep -i springpath | cut -d' ' -f3,4-"
+            cmd = "dpkg -l | grep -i springpath | grep -v storfs-support* | cut -d' ' -f3,4-"
             op = execmd(cmd)
             pkgl = []
             for s in op:
                 pkgl.append(s[:65])
             hostd[ip]["package & versions"] = pkgl
         except Exception as e:
-            log_msg(ERROR, str(e))
-        # Get eth0 IP Address
+            log_msg(ERROR, str(e) + "\r")
+        # Get eth1 IP Address
         try:
             cmd = "ifconfig eth0 | grep 'inet addr:' | cut -d: -f2| cut -d' ' -f1"
             eth1ip = execmd(cmd)
             hostd[ip]["eth0"] = ("".join(eth1ip)).encode("ascii", "ignore")
         except Exception as e:
-            log_msg(ERROR, str(e))
-        # Get eth1 IP Address
+            log_msg(ERROR, str(e) + "\r")
+        # Get vmk0 and vmk1 IP Address
         try:
-            cmd = "ifconfig eth1 | grep 'inet addr:' | cut -d: -f2| cut -d' ' -f1"
-            eth1ip = execmd(cmd)
-            hostd[ip]["eth1"] = ("".join(eth1ip)).encode("ascii", "ignore")
+            #cmd = "/usr/share/springpath/storfs-misc/run-on-esxi.sh 'esxcfg-vmknic -l'"
+            # Get ESX IP
+            cmd = "/opt/springpath/storfs-mgmt-cli/getLocalNode.sh | grep 'esxiIP=' | cut -d= -f2"
+            op = execmd(cmd)
+            if op:
+                esxip = op[0]
+                hostd[ip]["esxip"] = str(esxip)
         except Exception as e:
-            log_msg(ERROR, str(e))
-        # Get eth1 MTU
-        try:
-            cmd = "ifconfig eth1 | grep 'MTU:' | cut -d: -f2| cut -d' ' -f1"
-            eth1ip = execmd(cmd)
-            hostd[ip]["eth1mtu"] = ("".join(eth1ip)).encode("ascii", "ignore")
-        except Exception as e:
-            log_msg(ERROR, str(e))
+            log_msg(ERROR, str(e) + "\r")
         # check Iptables count
         try:
             cmd = "iptables -L -n | wc -l"
             ipt = execmd(cmd)
             hostd[ip]["iptables count"] = ("".join(ipt)).encode("ascii", "ignore")
         except Exception as e:
-            log_msg(ERROR, str(e))
-        # Get CMIP & CDIP
+            log_msg(ERROR, str(e) + "\r")
+        # Get keystore file
         try:
-            cmd = """grep -oP '"clustermanagementip":\".+\","managementsubnetmask"' /etc/springpath/secure/hxinstall_inventory.json"""
+            cmd = "md5sum /etc/springpath/secure/springpath_keystore.jceks"
             op = execmd(cmd)
-            cmip = ""
-            cdip = ""
-            for line in op:
-                m1 = re.search(r"clustermanagementip\":\"(.+)\",\"c", line)
-                if m1:
-                    cmip = str(m1.group(1))
-                m2 = re.search(r"clusterdataip\":\"(.+)\",", line)
-                if m2:
-                    cdip = str(m2.group(1))
-            hostd[ip]["cmip"] = str(cmip)
-            hostd[ip]["cdip"] = str(cdip)
+            if op:
+                keystoreFile = op[0]
+                hostd[ip]["keystore"] = keystoreFile.strip()
         except Exception as e:
-            log_msg(ERROR, str(e))
-        # Get CRM Master IP address
-        try:
-            cmd = "sysmtool --ns node --cmd list |grep -i crm -B 7"
-            op = execmd(cmd)
-            crmip = ""
-            cip = ""
-            for line in op:
-                if "Name:" in line:
-                    ln = str(line).split(":")
-                    if len(ln) == 2:
-                        cip = ln[1].strip()
-                    continue
-                elif "CRM Master:" in line and "YES" in line:
-                    crmip = cip
-                    break
-            hostd[ip]["crmaster"] = str(crmip)
-        except Exception as e:
-            log_msg(ERROR, str(e))
+            log_msg(ERROR, str(e) + "\r")
     except Exception as e:
-        msg = "\nNot able to establish SSH connection to HX Node: " + ip
+        msg = "\r\nNot able to establish SSH connection to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
         log_msg("", msg)
-        log_msg(ERROR, str(e))
+        log_msg(ERROR, str(e) + "\r")
     finally:
         client.close()
 
@@ -381,21 +310,21 @@ def thread_timestamp(ip, hxusername, hxpassword, time_out):
     try:
         # Initiate SSH Connection
         client.connect(hostname=ip, username=hxusername, password=hxpassword, timeout=time_out)
-        msg = "\nSSH connection established to HX Node: " + ip
+        msg = "\r\nSSH connection established to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
-        # log_msg("", msg)
+        #log_msg("", msg)
         # Check date
         try:
             cmd = 'date "+%D %T"'
             hdate = execmd(cmd)
             hostd[ip]["date"] = ("".join(hdate)).encode("ascii", "ignore")
         except Exception as e:
-            log_msg(ERROR, str(e))
+            log_msg(ERROR, str(e) + "\r")
     except Exception as e:
-        msg = "\r\nNot able to establish SSH connection to HX Node: " + ip
+        msg = "\r\nNot able to establish SSH connection to HX Node: " + ip + "\r"
         log_msg(INFO, msg)
-        # log_msg("", msg)
-        log_msg(ERROR, str(e))
+        #log_msg("", msg)
+        log_msg(ERROR, str(e) + "\r")
     finally:
         client.close()
 
@@ -403,13 +332,13 @@ def thread_timestamp(ip, hxusername, hxpassword, time_out):
 def get_vmk1(ip, hxusername, esxpassword, time_out):
     esxip = hostd[ip].get("esxip", "")
     if esxip != "":
+        vmknode = ""
         try:
             # Initiate SSH Connection
             client.connect(hostname=esxip, username=hxusername, password=esxpassword, timeout=time_out)
             msg = "\r\nSSH connection established to ESX Host: " + esxip + "\r"
             log_msg(INFO, msg)
             log_msg("", msg)
-            vmknode = ""
             # Check vMotion Enabled
             try:
                 cmd = "vim-cmd hostsvc/vmotion/netconfig_get | grep -i selectedVnic"
@@ -433,24 +362,17 @@ def get_vmk1(ip, hxusername, esxpassword, time_out):
                 cmd = "esxcfg-vmknic -l"
                 op = execmd(cmd)
                 for line in op:
-                    if "vmk0" in line and "IPv4" in line:
-                        m1 = re.search(r"([\d]{1,3}(.[\d]{1,3}){3})", line)
-                        if m1:
-                            hostd[ip]["vmk0"] = str(m1.group(1))
-                    elif "vmk1" in line and "IPv4" in line:
-                        m2 = re.search(r"([\d]{1,3}(.[\d]{1,3}){3})", line)
-                        if m2:
-                            hostd[ip]["vmk1"] = str(m2.group(1))
-                    # checking vmotion ip address
-                    if vmknode != "":
-                        if vmknode in line and "IPv4" in line:
-                            m3 = re.search(r"([\d]{1,3}(.[\d]{1,3}){3})", line)
-                            if m3:
-                                esx_vmotion[esxip]["vmkip"] = str(m3.group(1))
-                                if " 1500 " in line:
-                                    esx_vmotion[esxip]["mtu"] = "1472"
-                                elif " 9000 " in line:
-                                    esx_vmotion[esxip]["mtu"] = "8972"
+                    if "vmk1" in line and "IPv4" in line:
+                        m = re.search(r"([\d]{1,3}(.[\d]{1,3}){3})", line)
+                        if m:
+                            vmk1 = str(m.group(1))
+                            hostd[ip]["vmk1"] = vmk1
+                            vmk1_list.append(vmk1)
+                            vmk1_mtu[vmk1] = {}
+                            if " 1500 " in line:
+                                vmk1_mtu[vmk1]["mtu"] = "1472"
+                            elif " 9000 " in line:
+                                vmk1_mtu[vmk1]["mtu"] = "8972"
             except Exception as e:
                 log_msg(ERROR, str(e) + "\r")
         except Exception as e:
@@ -475,24 +397,42 @@ def pingstatus(op):
 
 
 def cluster_services_check(ip):
-    # 1) Get State & Healthstate
+    # 1) stcli cluster info
     cldict = {}
+    # Get Healthstate
+    cmd = "stcli cluster info | grep -i healthState: | cut -d: -f2"
+    op = execmd(cmd)
+    cldict["HealthState"] = "".join(op)
+    # Get State
+    cmd = "stcli cluster info | grep -i ^State: | cut -d: -f2"
+    op = execmd(cmd)
+    cldict["State"] = "".join(op)
+    log_msg(INFO, str(cldict) + "\r")
+
+    # 2) sysmtool --ns cluster --cmd healthdetail
     cmd = "sysmtool --ns cluster --cmd healthdetail"
     cl_health = execmd(cmd)
     cl_health_reason = []
-    flag2 = flag3 = flag4 = 0
+    flag2 = flag3 = flag4 = 0  
+    global nodes
+    nodes = ""
     for line in cl_health:
         if line.startswith("Cluster Health Detail:"):
             flag2 = 1
             continue
         if flag2 == 1 and line.startswith("State:"):
             s = str(line.split(": ")[-1]).lower()
-            cldict["State"] = s
+            if cldict["State"] == s :
+                pass
+            else:
+                cldict["State"] = s
             continue
         if flag2 == 1 and "HealthState:" in line:
             h = str(line.split(": ")[-1]).lower()
-            cldict["HealthState"] = h
-            if not "healthy" in h.lower():
+            if cldict["HealthState"] == h:
+                continue
+            else:
+                cldict["HealthState"] = h
                 flag3 = 1
         if flag3 == 1 and "Health State Reason:" in line:
             flag4 = 1
@@ -502,10 +442,13 @@ def cluster_services_check(ip):
                 break
             else:
                 cl_health_reason.append(line)
+        if flag2 == 1 and "Current ensemble size:" in line:
+            nodes = line.strip().split(": ")[1]
+            break
     log_msg(INFO, str(cldict) + "\r")
     hostd[ip].update(cldict)
 
-    # 2) Check service_status.sh
+    # 3) service_status.sh 
     cmd = "service_status.sh"
     cl_service = execmd(cmd)
     # pidof storfs
@@ -516,8 +459,8 @@ def cluster_services_check(ip):
         if s.isdigit():
             cl_service.append("storfs {:>44}".format("... Running"))
         else:
-            cl_service.append("storfs {:>44}".format("... Not Running"))
-            # pidof stMgr
+            cl_service.append("storfs {:>44}".format("... Not Running"))   
+    # pidof stMgr
     cmd = "pidof stMgr"
     op = execmd(cmd)
     for line in op:
@@ -534,9 +477,9 @@ def cluster_services_check(ip):
         if s.isdigit():
             cl_service.append("stNodeMgr {:>41}".format("... Running"))
         else:
-            cl_service.append("stNodeMgr {:>41}".format("... Not Running"))
-
-    # 3) Check Space State & Enospc State
+            cl_service.append("stNodeMgr {:>41}".format("... Not Running"))  
+    
+    # 4) sysmtool --ns cluster --cmd enospcinfo
     cmd = "sysmtool --ns cluster --cmd enospcinfo"
     cl_space = execmd(cmd)
     free_capacity = ""
@@ -550,22 +493,22 @@ def cluster_services_check(ip):
         if "ENOSPC warning:" in line:
             ENOSPC_warning = line.strip().split(": ")[1]
     if free_capacity[-1] == ENOSPC_warning[-1]:
-        if float(free_capacity[:-1]) >= float(ENOSPC_warning[:-1]):
+        if float(free_capacity[:-1])>= float(ENOSPC_warning[:-1]):
             space_state = "healthy"
         else:
             space_state = "unhealthy"
     elif free_capacity[-1] == "T":
-        if (float(free_capacity[:-1]) * 1024) >= float(ENOSPC_warning[:-1]):
+        if (float(free_capacity[:-1])*1024)>= float(ENOSPC_warning[:-1]):
             space_state = "healthy"
         else:
             space_state = "unhealthy"
     elif free_capacity[-1] == "G":
-        if (float(free_capacity[:-1]) * 1024) >= float(ENOSPC_warning[:-1]):
+        if (float(free_capacity[:-1])*1024)>= float(ENOSPC_warning[:-1]):
             space_state = "healthy"
         else:
             space_state = "unhealthy"
     elif free_capacity[-1] == "M":
-        if (float(free_capacity[:-1]) * 1024 * 1024) >= float(ENOSPC_warning[:-1]):
+        if (float(free_capacity[:-1])*1024*1024)>= float(ENOSPC_warning[:-1]):
             space_state = "healthy"
         else:
             space_state = "unhealthy"
@@ -577,28 +520,35 @@ def cluster_services_check(ip):
                 if "ENOSPACE_CLEAR" in enospc_state.strip():
                     enospc_state_check = "PASS"
             break
-
-    # 4) Check Cleaner Info
-    cmd = "sysmtool --ns cleaner --cmd status | cut -d: -f2"
-    op = execmd(cmd)
+    # 5) stcli cleaner info
+    cmd = "stcli cleaner info"
+    clop = execmd(cmd)
     cl_cleaner_state = ""
+    # Get eth1 ip address
+    cmd = "ifconfig eth1 | grep 'inet addr:' | cut -d: -f2| cut -d' ' -f1"
+    op = execmd(cmd)
+    eth1ip = ""
     if op:
-        cl_cleaner_state = ("".join(op)).strip()
-
-    # 5) Check Data Replication Factor
-    cmd = "sysmtool --ns cluster --cmd info | grep 'Replication Factor:' | tail -1 | cut -d: -f2"
+        eth1ip = op[0]
+    for line in clop:
+        if eth1ip in line or ip in line:
+            if "online" in line.lower():
+                cl_cleaner_state = "online"
+            elif "offline" in line.lower():
+                cl_cleaner_state = "offline"
+            break
+    # 6) Data Replication Factor
+    cmd = "stcli cluster info | grep 'dataReplicationFactor:' | tail -1 | cut -d: -f2"
     op = execmd(cmd)
     rf = ""
     if op:
         rf = op[0].strip()
-
     # Update Test Detail info
     testdetail[ip]["Cluster services check"] = OrderedDict()
     # State
     testdetail[ip]["Cluster services check"]["State"] = cldict["State"]
     # HealthState
-    testdetail[ip]["Cluster services check"]["HealthState"] = {"Status": cldict["HealthState"],
-                                                               "Result": "\n".join(cl_health_reason)}
+    testdetail[ip]["Cluster services check"]["HealthState"] = cldict["HealthState"]
     # Services
     testdetail[ip]["Cluster services check"]["Services"] = cl_service
     # Space state
@@ -612,15 +562,15 @@ def cluster_services_check(ip):
 
     # Update Test summary
     cluster_service_chk = "FAIL"
-    if cldict["State"].lower() == "online":
+    if cldict["State"] == "online":
         cluster_service_chk = "PASS"
-    if cldict["HealthState"].lower() == "healthy":
+    if cldict["HealthState"] == "healthy":
         cluster_service_chk = "PASS"
     for line in cl_service:
         if "Springpath File System" in line and "Not" in line:
             cluster_service_chk = "FAIL"
             break
-        elif "SCVM Client" in line and "Not" in line:
+        elif line.startswith("SCVM Client") and "Not" in line:
             cluster_service_chk = "FAIL"
             break
         elif "System Management Service" in line and "Not" in line:
@@ -629,10 +579,8 @@ def cluster_services_check(ip):
         elif line.startswith("Cluster IP Monitor") and "Not" in line:
             cluster_service_chk = "FAIL"
             break
-    testsum[ip]["Cluster services check"] = {"Status": cluster_service_chk,
-                                             "Result": "Checks storfs, stMgr, sstNodeMgr service running on each node."}
-    testsum[ip]["Enospc state check"] = {"Status": enospc_state_check,
-                                         "Result": "Checks if the cluster storage utilization is above threshold."}
+    testsum[ip]["Cluster services check"] = {"Status": cluster_service_chk, "Result": "Checks storfs, stMgr, sstNodeMgr service running on each node."}
+    testsum[ip]["Enospc state check"] = {"Status": enospc_state_check, "Result": "Checks if the cluster storage utilization is above threshold."}
 
 
 def zookeeper_check(ip):
@@ -645,13 +593,6 @@ def zookeeper_check(ip):
     for line in zkl:
         if "Mode:" in line:
             mode = line.split(": ")[1]
-
-    # Current ensemble size
-    nodes = ""
-    cmd = "sysmtool --ns cluster --cmd healthdetail | grep -i 'Current ensemble size:' | cut -d: -f2"
-    op = execmd(cmd)
-    if op:
-        nodes = op[0]
 
     # 2) Services
     # pidof exhibitor
@@ -666,25 +607,28 @@ def zookeeper_check(ip):
             exh_service = "exhibitor {:>32}".format("... Running")
         else:
             exh_service = "exhibitor {:>32}".format("... Not Running")
-            zcond1 = 1
+            zcond1 = 1    
     if zcond1 == 1:
         cmd = "ls /etc/springpath/*"
         op = execmd(cmd)
-        exh_comm.append("Files in the path[/etc/springpath/*]")
+        exh_comm.append("Files in the path[/etc/springpath/*]") 
         for line in op:
-            exh_comm.append(line.strip())
+            exh_comm.append(line.strip()) 
         cmd = "ls /opt/springpath/config/*"
         op = execmd(cmd)
-        exh_comm.append("\nFiles in the path[/opt/springpath/config/*]")
+        exh_comm.append("\nFiles in the path[/opt/springpath/config/*]") 
         for line in op:
-            exh_comm.append(line.strip())
-
+            exh_comm.append(line.strip())    
+            
     # 3) Check exhibitor.properties file exists
     cmd = "ls /etc/exhibitor/exhibitor.properties"
     op = execmd(cmd)
     prop_file = ""
     for line in op:
-        if "exhibitor.properties" in line:
+        if "Not able to run the command" in line:
+            prop_file = "Not Exists"
+            break
+        elif "exhibitor.properties" in line and not("cannot access" in line):
             prop_file = "Exists"
         else:
             prop_file = "Not Exists"
@@ -692,12 +636,26 @@ def zookeeper_check(ip):
     # Epoch Issue
     # 4) Accepted Epoch value
     # 5) Current Epoch value
-    cmd = 'grep -m1 "" /var/zookeeper/version-2/acceptedEpoch'
+    cmd = "grep -m1 '' /var/zookeeper/version-2/acceptedEpoch"
     op = execmd(cmd)
-    accepoch = "".join(op)
-    cmd = 'grep -m1 "" /var/zookeeper/version-2/currentEpoch'
+    acflag = 0
+    for line in op:
+        if "Not able to run the command" in line or "No such file or directory" in line:
+            acflag = 1
+    if acflag:
+        accepoch = ""
+    else:
+        accepoch = "".join(op)
+    cmd = "grep -m1 '' /var/zookeeper/version-2/currentEpoch"
     op = execmd(cmd)
-    curepoch = "".join(op)
+    cuflag = 0
+    for line in op:
+        if "Not able to run the command" in line or "No such file or directory" in line:
+            cuflag = 1
+    if cuflag:
+        curepoch = ""
+    else:
+        curepoch = "".join(op)
 
     # 6) Disk usage
     # Each should be less than 80%
@@ -735,16 +693,22 @@ def zookeeper_check(ip):
     testdetail[ip]["ZooKeeper and Exhibitor check"] = OrderedDict()
     # Mode
     testdetail[ip]["ZooKeeper and Exhibitor check"]["Mode"] = mode
+
     # Current ensemble size
     testdetail[ip]["ZooKeeper and Exhibitor check"]["Current ensemble size"] = nodes
+
     # Services
     testdetail[ip]["ZooKeeper and Exhibitor check"]["Services"] = exh_service
+
     # exhibitor.properties file
     testdetail[ip]["ZooKeeper and Exhibitor check"]["exhibitor.properties file"] = prop_file
+
     # Accepted Epoch value
     testdetail[ip]["ZooKeeper and Exhibitor check"]["Accepted Epoch value"] = accepoch
+
     # Current Epoch value
     testdetail[ip]["ZooKeeper and Exhibitor check"]["Current Epoch value"] = curepoch
+
     # Disk Usage
     testdetail[ip]["ZooKeeper and Exhibitor check"]["System Disks Usage"] = {"Status": zdiskchk, "Result": zdisk}
 
@@ -757,19 +721,20 @@ def zookeeper_check(ip):
         exh_chk = "PASS"
     testsum[ip]["Zookeeper check"] = {"Status": zoo_chk, "Result": "Checks if Zookeeper service is running."}
     testsum[ip]["Exhibitor check"] = {"Status": exh_chk, "Result": "Checks if Exhibitor in running."}
-    testsum[ip]["System Disks Usage"] = {"Status": zdiskchk,
-                                         "Result": "Checks if /sda1, var/stv and /var/zookeeper is less than 80%."}
+    testsum[ip]["System Disks Usage"] = {"Status": zdiskchk, "Result": "Checks if /sda1, var/stv and /var/zookeeper is less than 80%."}
 
-
+    
 def hdd_check(ip):
     # HDD health check
+    # sysmtool --ns disk --cmd list
+    # sysmtool --ns disk --cmd list | grep -i claimed | wc -l
     # Claimed Disks
     cmd = "sysmtool --ns disk --cmd list | grep -i claimed | wc -l"
     op = execmd(cmd)
     cdsk = ""
     for line in op:
         cdsk = line.strip()
-
+    # sysmtool --ns disk --cmd list | grep -i blacklisted | wc -l
     # Blacklisted Disks
     cmd = "sysmtool --ns disk --cmd list | grep -i blacklisted | wc -l"
     op = execmd(cmd)
@@ -795,49 +760,52 @@ def hdd_check(ip):
                 if len(ln) == 2:
                     bdisklist.append(ln[1])
         logger.info("Blacklisted Disks: " + ",".join(bdisklist) + "\r")
-
+    # sysmtool --ns disk --cmd list | grep -i ignored | wc -l
     # Ignored Disks
     cmd = "sysmtool --ns disk --cmd list | grep -i ignored | wc -l"
     op = execmd(cmd)
     idsk = ""
     for line in op:
         idsk = line.strip()
-
     # Update Test Detail info
-    testdetail[ip]["HDD health check"] = OrderedDict()
+    testdetail[ip]["HDD Health check"] = OrderedDict()
     # Claimed
-    testdetail[ip]["HDD health check"]["Claimed"] = cdsk
-    # Blacklisted
-    testdetail[ip]["HDD health check"]["Blacklisted"] = {"Status": bdsk, "Result": "\n".join(bdisklist)}
+    testdetail[ip]["HDD Health check"]["Claimed"] = cdsk
+
+    #Blacklisted
+    testdetail[ip]["HDD Health check"]["Blacklisted"] = {"Status": bdsk, "Result": "\n".join(bdisklist)}
+
     # Ignored
-    testdetail[ip]["HDD health check"]["Ignored"] = idsk
+    testdetail[ip]["HDD Health check"]["Ignored"] = idsk
 
     # Update Test summary
     hd_chk = "PASS"
     if int(bdsk) > 0:
         hd_chk = "FAIL"
-    testsum[ip]["HDD health check"] = {"Status": hd_chk, "Result": "Checks if any drive is in blacklisted state."}
+    testsum[ip]["HDD Health check"] = {"Status": hd_chk, "Result": "Checks if any drive is in blacklisted state."}
 
 
-# Pre-Upgrade Check
 def pre_upgrade_check(ip):
+    # Pre-Upgrade Check
     # 1) Check HX Cluster version
-    cmd = "stcli about"
+    cmd = "stcli cluster version"
     hxvs = execmd(cmd)
     vflag = False
+    global sedflag
     for line in hxvs:
-        if "Not able to run the command" in line:
-            hostd[ip]["version"] = ""
-            break
-        elif "display_version" in line:
+        if "Cluster version" in line:
             l = line.split(": ")
             if len(l) == 2:
                 version = l[1]
-                version = version.replace(",", "")
-                version = version.replace("'", "")
-                hostd[ip]["version"] = version.strip()
-                if l[1].startswith("1.8"):
-                    vflag = True
+                #Cluster version: Version(4.0.2a-35118)
+                if "Version" in version:
+                    m = re.search(r"\((.+)\)", version)
+                    if m:
+                        hostd[ip]["version"] = m.group(1)
+                else:
+                    hostd[ip]["version"] = version.strip()
+                    if l[1].startswith("1.8"):
+                        vflag = True
 
     # 2) NTP deamon running check
     ntp_deamon_check = "FAIL"
@@ -867,7 +835,7 @@ def pre_upgrade_check(ip):
             ntp_sync_check = "PASS"
             break
 
-    # 3) DNS check
+    # 4) DNS check
     cmd = "stcli services dns show"
     op = execmd(cmd)
     dnsip = ""
@@ -876,12 +844,10 @@ def pre_upgrade_check(ip):
     for line in op:
         match = re.search(r"(?:\d{1,3}.){3}\d{1,3}", line)
         if match:
-            dnsip = match.group()
-            msg = "\r\nDNS IP Address: " + str(dnsip) + "\r"
-            log_msg(INFO, msg)
-            break
+           dnsip = match.group()
+           msg = "\r\nDNS IP Address: " + str(dnsip) + "\r"
+           log_msg(INFO, msg)
     if dnsip:
-        # cmd = "ping {} -c 3 -i 0.01".format(dnsip)
         cmd = "dig @{}".format(dnsip)
         dns_check = "FAIL"
         digop = execmd(cmd)
@@ -891,52 +857,86 @@ def pre_upgrade_check(ip):
                 break
             elif "OPT PSEUDOSECTION:" in line:
                 break
-        digop = [(str(l).rstrip()).replace("\t", " " * 5) for l in digop]
+        digop = [(str(l).rstrip()).replace("\t", " "*5) for l in digop]
     # Update Test summary
     if dns_check == "PASS":
         testsum[ip]["DNS check"] = {"Status": "PASS", "Result": "Checks if configured DNS is reachable."}
     else:
         testsum[ip]["DNS check"] = {"Status": "FAIL", "Result": "Please verify DNS resolution and connectivity."}
 
-    # 4) Hyper-V Manager IP Check
+    # 5) vCenter Reachability check
+    cmd = "stcli cluster info | grep vCenterURL"
+    op = execmd(cmd)
+    vcenterip = ""
+    vcenter_check = "FAIL"
+    for line in op:
+        match = re.search(r"(?:\d{1,3}.){3}\d{1,3}", line)
+        if match:
+           vcenterip = match.group()
+           msg = "\r\nvCenter IP Address: " + str(vcenterip) + "\r"
+           log_msg(INFO, msg)
+        else:
+            try:
+                l = line.split(": ")
+                if len(l) == 2:
+                    dnip = l[1]
+                    dnip = dnip.replace("https://", "")
+                    vcenterip = dnip.strip()
+                    msg = "\r\nvCenter IP Address: " + str(vcenterip) + "\r"
+                    log_msg(INFO, msg)
+            except Exception:
+                pass
 
+    if vcenterip:
+        cmd = "ping {} -c 3 -i 0.01".format(vcenterip)
+        op = execmd(cmd)
+        vcenter_check = pingstatus(op)
 
     # Update Test summary
-    testsum[ip]["Timestamp check"] = {"Status": str(hostd[ip]["date check"]),
-                                      "Result": "Checks if the timestamp is same across all Nodes."}
+    # vCenter Reachability check
+    if vcenter_check == "FAIL":
+        testsum[ip]["vCenter reachability check"] = {"Status": vcenter_check, "Result": "Check manually network connectivity."}
+    else:
+        testsum[ip]["vCenter reachability check"] = {"Status": vcenter_check, "Result": "Checks if vCenter is network reachable using PING."}
+    # Timestamp check
+    testsum[ip]["Timestamp check"] = {"Status": str(hostd[ip]["date check"]), "Result": "Checks if the timestamp is same across all Nodes."}
+    # ntp source check
     if ntp_deamon_check == "PASS" and hostd[ip]["ntp source check"] == "PASS" and ntp_sync_check == "PASS":
         testsum[ip]["NTP sync check"] = {"Status": "PASS", "Result": "Checks if the NTP is synced with NTP server."}
     else:
         testsum[ip]["NTP sync check"] = {"Status": "FAIL", "Result": "Checks if the NTP is synced with NTP server."}
-    testsum[ip]["Check package & versions"] = {"Status": str(hostd[ip]["check package & versions"]),
-                                               "Result": "Checks for count and version of HX packages on each node."}
-    testsum[ip]["Check Iptables count"] = {"Status": str(hostd[ip]["check iptables"]),
-                                           "Result": "Checks if the IP Table count matches on all nodes."}
+    # Check package & versions
+    testsum[ip]["Check package & versions"] = {"Status": str(hostd[ip]["check package & versions"]), "Result": "Checks for count and version of HX packages on each node."}
+    # Check Iptables count
+    testsum[ip]["Check Iptables count"] = {"Status": str(hostd[ip]["check iptables"]), "Result": "Checks if the IP Table count matches on all nodes."}
 
-    # 5) Check cluster usage
-    # Node failures tolerable
-    cmd = "sysmtool --ns cluster --cmd info | grep -i 'Node failures tolerable' | cut -d: -f2"
-    nop = execmd(cmd)
-    if nop:
-        NFT = nop[0].strip()
+    # 6) Check cluster usage
+    cmd = "stcli cluster storage-summary | grep -i nodeFailuresTolerable"
+    op = execmd(cmd)
+    op = "".join(op)
+    op = op.strip()
+    if ":" in op:
+        NFT = op.split(":")[1]
     else:
         NFT = "NA"
-    # Caching device failures tolerable
-    cmd = "sysmtool --ns cluster --cmd info | grep -i 'Caching device failures tolerable' | cut -d: -f2"
-    hop = execmd(cmd)
-    if hop:
-        HFT = hop[0].strip()
+    cmd = "stcli cluster storage-summary | grep -i cachingDeviceFailuresTolerable"
+    op = execmd(cmd)
+    op = "".join(op)
+    op = op.strip()
+    if ":" in op:
+        HFT = op.split(":")[1]
     else:
         HFT = "NA"
-    # Persistent device failures tolerable
-    cmd = "sysmtool --ns cluster --cmd info | grep -i 'Persistent device failures tolerable' | cut -d: -f2"
-    sop = execmd(cmd)
-    if sop:
-        SFT = sop[0].strip()
+    cmd = "stcli cluster storage-summary | grep -i persistentDeviceFailuresTolerable"
+    op = execmd(cmd)
+    op = "".join(op)
+    op = op.strip()
+    if ":" in op:
+        SFT = op.split(":")[1]
     else:
         SFT = "NA"
 
-    # 6) Check cache disk usage is spread across all controller
+    # 7) Check cache is spread across all controller
     cmd = "nfstool -- -m | sort -u -k2"
     cachl = []
     op = execmd(cmd)
@@ -945,9 +945,8 @@ def pre_upgrade_check(ip):
         if m:
             cachl.append(str(m.group(1)))
 
-    # 7) Check any extra number of pnodes
-    # cmd = "stcli cluster info | grep -i  pnode -n2 | grep -i name | wc -l"
-    cmd = "sysmtool --ns node --cmd list | grep -i PNODE -n2| grep -i name | wc -l "
+    # 8) Check any extra number of pnodes
+    cmd = "stcli cluster info | grep -i  pnode -n2 | grep -i name | wc -l"
     op = execmd(cmd)
     op = "".join(op)
     pnodes = int(op)
@@ -957,15 +956,16 @@ def pre_upgrade_check(ip):
             check_cache_vnodes = "PASS"
         else:
             check_cache_vnodes = "FAIL"
-    testsum[ip]["Cache Disks check"] = {"Status": check_cache_vnodes, "Result": "Checks the number of Cache Disks."}
-    snodes = len(hxeth1_list)
+    snodes = len(eth1_list)
     nodecheck = "FAIL"
     if pnodes == snodes:
         nodecheck = "PASS"
     testsum[ip]["Extra pnodes check"] = {"Status": nodecheck, "Result": "Checks for any stale Node entry."}
 
-    # 8)check memory
-    # cmd = "free -m"
+
+    # 9) check packages and versions(Moved to Thread)
+
+    # 10) check memory
     cmd = "free -m | grep Mem:"
     op = execmd(cmd)
     check_memory = "NA"
@@ -980,18 +980,17 @@ def pre_upgrade_check(ip):
     if check_memory == "FAIL":
         testsum[ip]["Memory usage check"] = {"Status": "FAIL", "Result": "Contact TAC"}
     else:
-        testsum[ip]["Memory usage check"] = {"Status": check_memory,
-                                             "Result": "Checks for available memory more than 2GB."}
+        testsum[ip]["Memory usage check"] = {"Status": check_memory, "Result": "Checks for available memory more than 2GB."}
 
-    # 9) check CPU
+    # 11) check CPU
     cmd = "top -b -n 1 | grep -B7 KiB"
     check_cpu = execmd(cmd)
     if not check_cpu:
         cmd = "top -b -n 1 | grep Cpu"
         check_cpu = execmd(cmd)
 
-    # 10) check Out of memory
-    cmd = "grep -i 'out of memory' -A5 /var/log/kern.log"
+    # 12) check Out of memory
+    cmd = "grep -ia 'out of memory' /var/log/kern.log"
     op = execmd(cmd)
     if op:
         if "Not able to run the command" in op:
@@ -1007,7 +1006,20 @@ def pre_upgrade_check(ip):
         testsum[ip]["Incidence of OOM in the log file"] = {"Status": "PASS",
                                                            "Result": "Checks for any previous incidence of Out Of Memory Condition."}
 
-    # 11) Check permissions for /tmp
+    # 13) ESXi supported upgrade
+    cmd = "grep -i ^esxi.version /usr/share/springpath/storfs-fw/springpath-hcl.conf"
+    op = execmd(cmd)
+    svsp = []
+    if op:
+        for line in op:
+            if "esxi.version=" in line:
+                l = line.split("=")
+                if len(l) == 2:
+                    vl = l[1]
+                    svsp = vl.split(",")
+    testsum[ip]["Supported vSphere versions"] = {"Status": str("\n".join(svsp)), "Result": "Prints the supported ESXi versions."}
+
+    # 14) Check permissions for /tmp
     cmd = "ls -ld /tmp"
     op = execmd(cmd)
     tmprcheck = ""
@@ -1016,320 +1028,640 @@ def pre_upgrade_check(ip):
             tmprcheck = "PASS"
         else:
             tmprcheck = "FAIL"
-    testsum[ip]["Check permissions for /tmp"] = {"Status": tmprcheck,
-                                                 "Result": "Checks if the /tmp permissions are set correctly."}
+    testsum[ip]["Check permissions for /tmp"] = {"Status": tmprcheck, "Result": "Checks if the /tmp permissions are set correctly."}
 
-    # 12) Cluster Access Policy (Lenient/Strict) check
+    # 15) Cluster Policy (Lenient/Strict) check
+    cmd = "stcli cluster info | grep -i 'clusterAccessPolicy:' | head -1"
+    op = execmd(cmd)
     clPolicy = ""
-    cmd = 'hxcli cluster info | egrep "Cluster Access Policy"'
-    op = execmd(cmd)
     for line in op:
-        if ":" in line:
-            l = line.split(":")
-            if l:
-                clPolicy = l[1].strip()
+        if "lenient" in line.lower():
+            clPolicy = "Lenient"
+            testsum[ip]["Check Cluster Policy"] = {"Status": "Lenient", "Result": "Checks the Configured Cluster Policy"}
+        elif "strict" in line.lower():
+            clPolicy = "Strict"
+            testsum[ip]["Check Cluster Policy"] = {"Status": "Strict", "Result": "Please refer - https://tinyurl.com/yadvhd84"}
 
-    if "strict" in clPolicy.lower():
-        testsum[ip]["Check Cluster Access Policy"] = {"Status": "Strict",
-                                                      "Result": "Please refer - https://tinyurl.com/yadvhd84"}
+    # 16) Upgrade suggestion for HX version 2.1(1x)
+    hxv = ""
+    hxupsug = ""
+    try:
+        hxv = hostd[ip]["version"]
+        m = re.search(r"2\.1[\.|(]1.", hxv)
+        if m:
+            hxupsug = "DO NOT direct upgrade to 3.5.2g.\nUpgrade to 3.5.2f first."
+    except Exception:
+        pass
+
+    # 17) Different sector size check for HX version equal to 3.5.2a or < 3.0.1j
+    hxsectchk = ""
+    if "3.5.2a" in hxv:
+        hxsectchk = "Do not perform node expansion or add drives (with HX-SD38TBE1NK9) before \nupgrading to higher versions"
+    elif hxv.startswith("1.") or hxv.startswith("2."):
+        hxsectchk = "Do not perform node expansion or add drives (with HX-SD38TBE1NK9) before \nupgrading to higher versions"
     else:
-        testsum[ip]["Check Cluster Access Policy"] = {"Status": clPolicy,
-                                                      "Result": "Checks the Configured Cluster Access Policy"}
+        m = re.search(r"3\.0\.1[a-j]", hxv)
+        if m:
+            hxsectchk = "Do not perform node expansion or add drives (with HX-SD38TBE1NK9) before \nupgrading to higher versions"
 
-    # 13) Check CMIP hostname
-    cmd = """grep -oP '"clustermanagementip":\".+\","clusterdataip"' /etc/springpath/secure/hxinstall_inventory.json"""
+    # 18) Check springpath_keystore.jceks file [Run in Thread]
+    keystoreCheck = str(hostd[ip]["check keystore"])
+    if keystoreCheck == "FAIL":
+        testsum[ip]["Check springpath_keystore.jceks file"] = {"Status": "FAIL", "Result": "If failed, contact Cisco TAC."}
+    else:
+        testsum[ip]["Check springpath_keystore.jceks file"] = {"Status": keystoreCheck, "Result": "All the SCVM have same keystore file."}
+
+    # 19) SED Capable Check
+    global lsusbCheck
+    sedCapable = False
+    usbCheck = False
+    sedEnable = False
+    sedDrive = False
+    diskLock = ""
+    cmd = "cat /etc/springpath/sed_capability.conf"
     op = execmd(cmd)
-    cmip = ""
     for line in op:
-        if "clustermanagementip" in line:
-            m = re.search(r"([\d]{1,3}(\.[\d]{1,3}){3})", line)
-            if m:
-                cmip = "FAIL"
-                break
+        if "True" in line:
+            sedCapable = True
+    if sedCapable:
+        testsum[ip]["SED Capable"] = {"Status": "YES", "Result": "Checks if the cluster is SED Capable."}
+    else:
+        testsum[ip]["SED Capable"] = {"Status": "NO", "Result": "Checks if the cluster is SED Capable."}
+
+    if sedCapable:
+        # 20) USB0 Check:
+        cmd = "ifconfig | grep -i usb0 -A1 | grep 'inet addr' | cut -d ':' -f2 | cut -d ' ' -f1"
+        op = execmd(cmd)
+        if op:
+            usbCheck = True
+            testsum[ip]["USB0 check"] = {"Status": "PASS", "Result": "Checks for USB0 in SED clusters."}
+        else:
+            lsusbCheck = True
+            testsum[ip]["USB0 check"] = {"Status": "FAIL", "Result": "Contact TAC"}
+
+        # 21) SED AF Drives – 5100/5200 Check
+        # Condition1 : Running 3.5(2a) and below
+        # Condition2: Micron_5100 or Micron_5200 in /var/log/springpath/diskslotmap-v2.txt
+        sflag1 = sflag2 = 0
+        if "3.5.2a" in hxv:
+            sflag1 = 1
+        elif hxv.startswith("1.") or hxv.startswith("2."):
+            sflag1 = 1
+        elif hxv.startswith("3.5"):
+            m1 = re.search(r"[1-3]\.[0-5]\.1[a-z]", hxv)
+            if m1:
+                sflag1 = 1
+        else:
+            m2 = re.search(r"3\.[0-4]", hxv)
+            if m2:
+                sflag1 = 1
+        # Condition2: Micron_5100 or Micron_5200 in /var/log/springpath/diskslotmap-v2.txt
+        cmd = "grep -E -- 'Micron_5100|Micron_5200' /var/log/springpath/diskslotmap-v2.txt"
+        op = execmd(cmd)
+        for line in op:
+            if "Micron_5100" in line or "Micron_5200" in line:
+                sflag2 = 1
+        if sflag1 and sflag2:
+            global sedNote
+            sedNote = True
+            testsum[ip]["SED AF Drives – 5100/5200 check"] = {"Status": "FAIL", "Result": "Please refer - https://tinyurl.com/vqnytww"}
+        elif not sflag1 and sflag2:
+            sedDrive = True
+            testsum[ip]["SED AF Drives – 5100/5200 check"] = {"Status": "PASS", "Result": "Checks if Micron 5100/5200 drives in use."}
+
+        # 22) SED Enabled Check:
+        cmd = "cat /etc/springpath/sed.conf"
+        op = execmd(cmd)
+        for line in op:
+            if "sed_encryption_state=enabled" in line:
+                sedEnable = True
+                testsum[ip]["SED Enabled"] = {"Status": "YES", "Result": "Checks if the cluster is SED Enabled."}
             else:
-                cmip = "PASS"
-                break
-    testsum[ip]["Check CMIP Hostname"] = {"Status": cmip,
-                                          "Result": "Check if the clustermanagementip has hostname defined."}
+                testsum[ip]["SED Enabled"] = {"Status": "NO", "Result": "Checks if the cluster is SED Enabled."}
 
-    # 14) Check domain join health
-    cmd = "domainjoin-cli query"
-    dmhlist = execmd(cmd)
-    testsum[ip]["Domain join health"] = {"Status": str("\n".join(dmhlist)), "Result": "Checking domain join health of the Node."}
+        # 23) Disk Locked Check:
+        if sedEnable:
+            cmd = "/usr/share/springpath/storfs-appliance/sed-client.sh -l | cut -d ',' -f5 | grep -a 1"
+            op = execmd(cmd)
+            if op:
+                diskLock = "PASS"
+                testsum[ip]["Disk Locked check"] = {"Status": "PASS", "Result": "Checks if any SED disk is locked."}
+            else:
+                diskLock = "FAIL"
+                testsum[ip]["Disk Locked check"] = {"Status": "FAIL", "Result": "Checks if any SED disk is locked."}
 
-    ######################
+    # Stretch Cluster check
+    global stretchCluster
+    witnessVmIp = ""
+    witnessReachability = ""
+    witnessLatetency = ""
+    storageLatetency = ""
+    if stretchCluster:
+        # Get the Witness VM IP
+        cmd = "stcli cluster info | grep dataZkIp"
+        op = execmd(cmd)
+        for line in op:
+            m = re.search(r"([\d]{1,3}(.[\d]{1,3}){3})", line)
+            if m:
+                witnessVmIp = str(m.group(1))
+        log_msg(INFO, "Witness VM IP Address: " + str(witnessVmIp) + "\r")
+
+        # 24) Check Witness Reachability
+        # Ping from eth0 to Witness VM IP Address
+        if witnessVmIp:
+            hostd[ip]["witnessVmIp"] = witnessVmIp
+            eth0 = hostd[ip]["eth0"]
+            cmd = "ping -I {} {} -c 3 -i 0.5".format(eth0, witnessVmIp)
+            wop = execmd(cmd)
+            witnessReachability = pingstatus(wop)
+            testsum[ip]["Check Witness Reachability"] = {"Status": witnessReachability, "Result": "Checks Witness VM IP address is reachabile."}
+
+            # 25) Check Witness Latetency
+            # Ping Time should be less than 200ms
+            for line in wop:
+                if "round-trip" in line:
+                    m = re.search(r"\/(\d+\.\d+)\sms$", line.strip())
+                    if m:
+                        pingTime = str(m.group(1))
+                        try:
+                            if float(pingTime) < 200:
+                                witnessLatetency = "PASS"
+                            else:
+                                witnessLatetency = "FAIL"
+
+                            # 26) Check Storage Latetency
+                            # Ping Time should be less than 5ms
+                            if float(pingTime) < 5:
+                                storageLatetency = "PASS"
+                            else:
+                                storageLatetency = "FAIL"
+                            testsum[ip]["Check Witness Latetency"] = {"Status": witnessLatetency,
+                                                                      "Result": "Checks Witness VM IP address is latetency."}
+                            testsum[ip]["Check Storage Latetency"] = {"Status": storageLatetency,
+                                                                      "Result": "Checks Storage latetency."}
+                        except Exception:
+                            pass
+
+    # 26) Check ZK-Cleanup-Script
+    # Only for HX 4.0.2c
+    zkstatus = ""
+    if "4.0.2c" in hostd[ip]["version"]:
+        cmd = "ps -aux | grep ZKTx | wc -l"
+        op = execmd(cmd)
+        if op:
+            zkcnt = op[0]
+            if zkcnt.isdigit():
+                if int(zkcnt) == 0:
+                    zkstatus = "FAIL"
+                else:
+                    zkstatus = "PASS"
+        if zkstatus == "FAIL":
+            testsum[ip]["Check ZK-Cleanup-Script"] = {"Status": zkstatus, "Result": "http://cs.co/9008HGXsy"}
+        else:
+            testsum[ip]["Check ZK-Cleanup-Script"] = {"Status": zkstatus, "Result": "Check to Identify multiple ZKTxnCleanup script."}
+
+    # 27) Run lsusb when USB0 Check Fails
+    if lsusbCheck:
+        cmd = "lsusb"
+        op = execmd(cmd)
+
+    #####################################################
     # Update Test Detail info
     testdetail[ip]["Pre-Upgrade check"] = OrderedDict()
     # HX Cluster version
-    testdetail[ip]["Pre-Upgrade check"]["HX Cluster version"] = hostd[ip]["version"]
+    testdetail[ip]["Pre-Upgrade check"]["HX Cluster version"] = hxvs
     # NTP deamon running
     testdetail[ip]["Pre-Upgrade check"]["NTP deamon running"] = {"Status": ntp_deamon, "Result": ntp_deamon_check}
     # NTP sync check
     testdetail[ip]["Pre-Upgrade check"]["NTP sync check"] = {"Status": ntp_sync_line, "Result": ntp_sync_check}
     # DNS check
     testdetail[ip]["Pre-Upgrade check"]["DNS check"] = {"Status": str("\n".join(digop)), "Result": dns_check}
+    # vCenter reachability check
+    testdetail[ip]["Pre-Upgrade check"]["vCenter reachability check"] = {"Status": vcenterip, "Result": vcenter_check}
     # Timestamp check
     allhostdt = []
     for i in sorted(hostd.keys()):
         allhostdt.append(str(i) + " - " + str(hostd[i]["date"]))
-    testdetail[ip]["Pre-Upgrade check"]["Timestamp check"] = {"Status": str("\n".join(allhostdt)),
-                                                              "Result": str(hostd[ip]["date check"])}
+    testdetail[ip]["Pre-Upgrade check"]["Timestamp check"] = {"Status": str("\n".join(allhostdt)), "Result": str(hostd[ip]["date check"])}
     # Primary NTP Source check
     allntpsrc = []
     for p in sorted(hostd.keys()):
         allntpsrc.append(str(p) + " : NTP IP - " + str(hostd[p]["ntp source"]))
-    testdetail[ip]["Pre-Upgrade check"]["Primary NTP Source check"] = {"Status": str("\n".join(allntpsrc)),
-                                                                       "Result": str(hostd[ip]["ntp source check"])}
+    testdetail[ip]["Pre-Upgrade check"]["Primary NTP Source check"] = {"Status": str("\n".join(allntpsrc)), "Result": str(hostd[ip]["ntp source check"])}
     # Cluster usage
-    testdetail[ip]["Pre-Upgrade check"]["Cluster Fault Tolerance"] = "Node Failures Tolerable:" + str(
-        NFT) + "\nHDD Failures Tolerable:" + str(HFT) + "\nSSD Failures Tolerable:" + str(SFT)
-    # Cache Disks usage
-    testdetail[ip]["Pre-Upgrade check"]["Cache Disks check"] = {"Status": str("\n".join(cachl)),
-                                                                "Result": check_cache_vnodes}
+    testdetail[ip]["Pre-Upgrade check"]["Cluster Fault Tolerance"] = "Node Failures Tolerable:" + str(NFT) + "\nHDD Failures Tolerable:" + str(HFT) + "\nSSD Failures Tolerable:" + str(SFT)
+    # Cache usage
+    testdetail[ip]["Pre-Upgrade check"]["Cache vNodes"] = {"Status": str("\n".join(cachl)), "Result": check_cache_vnodes}
+    # Cluster Upgrade Status: Removed
     # No extra pnodes
     testdetail[ip]["Pre-Upgrade check"]["No extra pnodes"] = nodecheck
     # Check package & versions
-    testdetail[ip]["Pre-Upgrade check"]["Check package & versions"] = {
-        "Status": str("\n".join(hostd[ip]["package & versions"])), "Result": str(hostd[ip]["check package & versions"])}
+    testdetail[ip]["Pre-Upgrade check"]["Check package & versions"] = {"Status": str("\n".join(hostd[ip]["package & versions"])), "Result": str(hostd[ip]["check package & versions"])}
     # Check Iptables count
-    testdetail[ip]["Pre-Upgrade check"]["Check Iptables count"] = {"Status": str(hostd[ip]["iptables count"]),
-                                                                   "Result": str(hostd[ip]["check iptables"])}
+    testdetail[ip]["Pre-Upgrade check"]["Check Iptables count"] = {"Status": str(hostd[ip]["iptables count"]), "Result": str(hostd[ip]["check iptables"])}
     # Check memory
     testdetail[ip]["Pre-Upgrade check"]["Check Memory usage"] = str(check_memory)
     # Check CPU
     testdetail[ip]["Pre-Upgrade check"]["Check CPU"] = str("\n".join(check_cpu))
     # Check Out of memory
     testdetail[ip]["Pre-Upgrade check"]["Incidence of OOM in the log file"] = str("\n".join(check_oom))
+    # Supported vSphere versions
+    testdetail[ip]["Pre-Upgrade check"]["Supported vSphere versions"] = str("\n".join(svsp))
     # Check permissions for /tmp
     testdetail[ip]["Pre-Upgrade check"]["Check permissions for /tmp"] = tmprcheck
+    if hxupsug != "":
+        testdetail[ip]["Pre-Upgrade check"]["Upgrade suggestion for HX version 2.1(1x)"] = hxupsug
+    if hxsectchk != "":
+        testdetail[ip]["Pre-Upgrade check"]["Different sector size check"] = hxsectchk
     # Cluster Policy (Lenient/Strict) check
-    if "strict" in clPolicy.lower():
-        testdetail[ip]["Pre-Upgrade check"]["Cluster Access Policy check"] = {"Status": "Strict",
-                                                                       "Result": "Please refer - https://tinyurl.com/yadvhd84"}
+    if clPolicy == "Strict":
+        testdetail[ip]["Pre-Upgrade check"]["Cluster Policy check"] = {"Status": "Strict", "Result": "Please refer - https://tinyurl.com/yadvhd84"}
     else:
-        testdetail[ip]["Pre-Upgrade check"]["Cluster Access Policy check"] = clPolicy
-    # Check CMIP Hostname
-    testdetail[ip]["Pre-Upgrade check"]["Check CMIP Hostname"] = cmip
-    # Check domain join health
-    testdetail[ip]["Pre-Upgrade check"]["Domain join health"] = {"Status": str("\n".join(dmhlist)),
-                                                                 "Result": "Checking domain join health of the Node."}
+        testdetail[ip]["Pre-Upgrade check"]["Cluster Policy check"] = clPolicy
+    # Check springpath_keystore.jceks file
+    testdetail[ip]["Pre-Upgrade check"]["Check springpath_keystore.jceks file"] = str(hostd[ip]["check keystore"])
+    # SED Capable Check:
+    if sedCapable:
+        testdetail[ip]["Pre-Upgrade check"]["SED Capable"] = "YES"
+        if usbCheck:
+            testdetail[ip]["Pre-Upgrade check"]["USB0 check"] = "PASS"
+        else:
+            testdetail[ip]["Pre-Upgrade check"]["USB0 check"] = {"Status": "FAIL", "Result": "Contact TAC"}
+    else:
+        testdetail[ip]["Pre-Upgrade check"]["SED Capable"] = "NO"
+    # SED AF Drives – 5100/5200 Check
+    if sedNote:
+        testdetail[ip]["Pre-Upgrade check"]["SED AF Drives – 5100/5200 check"] = {"Status": "FAIL", "Result": "Please refer - https://tinyurl.com/vqnytww"}
+    if sedDrive:
+        testdetail[ip]["Pre-Upgrade check"]["SED AF Drives – 5100/5200 check"] = "PASS"
+    # SED Enabled Check:
+    if sedEnable:
+        testdetail[ip]["Pre-Upgrade check"]["SED Enabled"] = "YES"
+        testdetail[ip]["Pre-Upgrade check"]["Disk Locked check"] = diskLock
+    # Stretch Cluster Check
+    if witnessVmIp:
+        testdetail[ip]["Pre-Upgrade check"]["Check Witness Reachability"] = {"Status": witnessReachability, "Result": "Checks Witness VM IP address is reachabile."}
+        testdetail[ip]["Pre-Upgrade check"]["Check Witness Latetency"] = {"Status": witnessLatetency, "Result": "Checks Witness VM IP address is latetency."}
+        testdetail[ip]["Pre-Upgrade check"]["Check Storage Latetency"] = {"Status": storageLatetency, "Result": "Checks Storage latetency."}
+    # Check ZK-Cleanup-Script
+    if zkstatus:
+        if zkstatus == "FAIL":
+            testdetail[ip]["Pre-Upgrade check"]["Check ZK-Cleanup-Script"] = {"Status": zkstatus, "Result": "http://cs.co/9008HGXsy"}
+        else:
+            testdetail[ip]["Pre-Upgrade check"]["Check ZK-Cleanup-Script"] = {"Status": zkstatus, "Result": "Check to Identify multiple ZKTxnCleanup script."}
 
 
-def hyperv_check(ip):
-    """
-    Check Remote HyperV Server
-    """
-    hostip = hostd[ip]["hyperv"]
-    log_msg(INFO, "Remote HyperV Check: " + str(hostip))
-    if hostip not in hvdict.keys():
-        hvdict[hostip] = {}
+def network_check(ip):
+    # Network Check(ESX)
     try:
-        url = "https://" + hostip + ":5986/wsman"
-        global psClient
-        psClient = Protocol(endpoint=url, transport="ntlm", username=wdusername, password=wdpassword, server_cert_validation="ignore")
-        # Get the hostname
-        cmd = "hostname"
-        op = rpscmd(cmd)
-        hostname = ""
-        for line in op:
-            hostname = line.strip()
-        log_msg(INFO, "Host Name: " + str(hostname))
-        hvdict[hostip]["HostName"] = {"Status": str(hostname), "Result": "Check if the hostname is defined."}
+        # Close connection
+        client.close()
+    except Exception:
+        pass
+    esxip = hostd[ip]["esxip"]
+    esx_version = ""
+    try:
+        if esxip != "":
+            # Initiate SSH Connection
+            client.connect(hostname=esxip, username=hxusername, password=esxpassword, timeout=time_out)
+            msg = "\r\nSSH connection established to ESX Host: " + esxip + "\r"
+            log_msg(INFO, msg)
 
-        # 1) Failover cluster manager role is enabled
-        cmd = "Get-WindowsFeature Failover*"
-        op = rpscmd(cmd)
-        flchk = ""
-        for line in op:
-            if "Installed" in line:
-                flchk = "Installed"
-            elif "Not Installed" in line:
-                flchk = "Not Installed"
-        hvdict[hostip]["Cluster Failover"] = {"Status": flchk,
-                                              "Result": "Check if the Failover Cluster Manager feature is installed."}
+            # Get all ESX and Storage Controller IP Address
+            opd = OrderedDict()
+            nwtestsum[esxip] = OrderedDict()
+            nwtestdetail[esxip] = OrderedDict()
 
-        # 2) Hyper-V Manager role / feature enabled
-        cmd = "Get-WindowsFeature Hyper-V"
-        op = rpscmd(cmd)
-        fechk = ""
-        for line in op:
-            if "Installed" in line:
-                fechk = "Installed"
-            elif "Not Installed" in line:
-                fechk = "Not Installed"
-        hvdict[hostip]["Hyper-V Role"] = {"Status": fechk,
-                                          "Result": "Check if the Hyper-V Manager feature is installed."}
-
-        # 3) Check Node State
-        cmd = "Get-ClusterNode"
-        op = rpscmd(cmd)
-        ndstate = ""
-        for line in op:
-            if hostname in line:
-                if "up" in line.lower():
-                    ndstate = "PASS"
-                elif "down" in line.lower():
-                    ndstate = "Fail"
-        if ndstate == "PASS":
-            hvdict[hostip]["Node State"] = {"Status": "PASS", "Result": "Check the Node State."}
-        else:
-            hvdict[hostip]["Node State"] = {"Status": ndstate,
-                                            "Result": "Please check the Cluster Failover status."}
-
-        # 4) Check network interfaces state
-        cmd = "Get-ClusterNetwork"
-        op = rpscmd(cmd)
-        nwstate = "PASS"
-        for line in op:
-            if "down" in line.lower():
-                nwstate = "FAIL"
-                break
-        hvdict[hostip]["Network Interfaces State"] = {"Status": nwstate,
-                                                      "Result": "Check the Network Interfaces State."}
-
-        # 5) Check Remote Management is enabled
-        cmd = "Get-Service WinRM"
-        op = rpscmd(cmd)
-        rmstate = ""
-        for line in op:
-            if "running" in line.lower() and "winrm" in line.lower():
-                rmstate = "PASS"
-                break
-        hvdict[hostip]["Remote Management Enabled"] = {"Status": nwstate,
-                                                       "Result": "Check if the Remote Management is enabled on the node."}
-
-        # 6) Check the Domain and forest details
-        cmd = """Get-WmiObject Win32_NTDomain -Filter \"DnsForestName = '$( (Get-WmiObject Win32_ComputerSystem).Domain)'\""""
-        op = rpscmd(cmd)
-        fdetails = []
-        for line in op:
-            if "Description" in line:
-                fdetails.append(line.strip())
-            elif "DnsForestName" in line:
-                fdetails.append(line.strip())
-            elif "DomainControllerAddress" in line:
-                fdetails.append(line.strip())
-            elif "DomainControllerName" in line:
-                fdetails.append(line.strip())
-            elif "DomainName" in line:
-                fdetails.append(line.strip())
-            elif "Status" in line:
-                fdetails.append(line.strip())
-        hvdict[hostip]["Check the Domain and forest details"] = {"Status": "\n".join(fdetails),
-                                                                 "Result": "Check the Domain and forest details of the cluster."}
-
-        # 7) Check host file entries
-        cmd = "Get-Content $env:SystemRoot\System32\Drivers\etc\hosts"
-        op = rpscmd(cmd)
-        hdetails = []
-        for line in op:
-            if not line.startswith("#"):
-                hdetails.append(line.strip())
-        hvdict[hostip]["Check host file entries"] = {"Status": "\n".join(hdetails),
-                                                     "Result": "Check if the host file have correct entries."}
-
-        # 8) Check Adapter details
-        cmd = "Get-NetIPConfiguration | Format-Table InterfaceAlias, InterfaceDescription, IPv4Address -auto"
-        adetails = rpscmd(cmd)
-        hvdict[hostip]["Check Adapter details"] = {"Status": "\n".join(adetails),
-                                                   "Result": "Check Adapter details of the node."}
-
-        # 9) Check MTU for Storage Data Network
-        cmd = "Get-NetIPInterface -AddressFamily IPv4 -InterfaceAlias vswitch-hx-storage-data | select NlMtu*"
-        op = rpscmd(cmd)
-        mtu = ""
-        for line in op:
-            if (line.strip()).isdigit():
-                mtu = line.strip()
-        hvdict[hostip]["MTU for Storage Data Network"] = {"Status": str(mtu),
-                                                          "Result": "Check MTU for the Storage Data Network."}
-
-        # 10) Check the status minifilter driver
-        cmd = "fltmc"
-        drivertails = rpscmd(cmd)
-        hvdict[hostip]["Drivers test"] = {"Status": "\n".join(drivertails),
-                                          "Result": "Check the status of minifilter drivers."}
-
-        # 11) Virtual Machine Management service check
-        vmmCheck = ""
-        con = 0
-        cmd = "Get-Process vmms | Format-list Name, Id, Responding"
-        op = rpscmd(cmd)
-        for line in op:
-            if "Id" in line:
-                m = re.search(r":\s(\d+)", line)
-                if m:
-                    con = 1
-            elif "Responding" in line:
-                if "True" in line and con:
-                    vmmCheck = "PASS"
-                else:
-                    vmmCheck = "FAIL"
-        if vmmCheck == "FAIL":
-            hvdict[hostip]["Virtual Machine Management service check"] = {"Status": "FAIL",
-                                                                          "Result": "Please manually verify the status of  VMMS service."}
-        else:
-            hvdict[hostip]["Virtual Machine Management service check"] = {"Status": vmmCheck,
-                                                                          "Result": "Checking if VMMS service is Up and Running."}
-
-        # 12) SMB Test
-        smbtest = []
-        smbfqdn = ""
-        smbResult = []
-        if hdetails:
-            for line in hdetails:
-                l = line.split()
-                if len(l) == 2:
-                    smbfqdn = l[1].strip()
-                    break
-        if smbfqdn:
+            # 1) Check hx user created
+            hxac = ""
             try:
-                psClient = Protocol(endpoint=url, transport="ntlm", username=wdusername, password=wdpassword, server_cert_validation="ignore")
-                for ds in datastorelist:
-                    cmd = r"test-path \\{}\{}".format(smbfqdn, ds)
-                    op = rpscmd(cmd)
+                cmd = "esxcli system account list"
+                op = execmd(cmd)
+                hxac = "FAIL"
+                for line in op:
+                    if "hxuser" in line or "springpath" in line:
+                        hxac = "PASS"
+                opd.update({"HX User Account Created": hxac})
+            except Exception:
+                pass
+
+            # 2) Check vMotion Enabled
+            vmst = esx_vmotion[esxip]["vmotion"]
+            opd.update({"vMotion Enabled": vmst})
+
+            # 3) Check vMotion reachability check
+            allvmkpingchk = []
+            vmknode = esx_vmotion[esxip].get("vmknode", "")
+            if vmst == "PASS" and vmknode != "":
+                for vip in esx_vmotion.keys():
+                    mtu = esx_vmotion[str(vip)]["mtu"]
+                    vmkip = esx_vmotion[str(vip)]["vmkip"]
+                    if vip == esxip:
+                        continue
+                    elif vmkip != "":
+                        try:
+                            cmd = "vmkping -I {} -c 3 -d -s {} -i 0.5 {}".format(vmknode, mtu, vmkip)
+                            op = execmd(cmd)
+                            pst = pingstatus(op)
+                            opd.update({cmd: pst})
+                            allvmkpingchk.append(pst)
+                        except Exception:
+                            pass
+
+            # 4) Check ESXi Version
+            try:
+                cmd = "vmware -l"
+                op = execmd(cmd)
+                opd.update({"ESX Version": op})
+                v = op[0]
+                m = re.search(r"ESXi (\d\.\d)", v)
+                if m:
+                    esx_version = m.group(1)
+            except Exception:
+                pass
+
+            # 5) ESX vib list
+            vibl = []
+            try:
+                #cmd = "esxcli software vib list| grep -i spring"
+                cmd = "esxcli software vib list| egrep -i 'scvm|stHyper|stfs'"
+                op = execmd(cmd)
+                for line in op:
+                    vibl.append(line.replace(" "*26, "    "))
+                opd.update({"ESX Vib List": vibl})
+            except Exception:
+                pass
+
+            # 6) Check SCVM and STFSNasPlugin version: Removed
+
+            # 7) ESX Services
+            try:
+                cmd = "chkconfig --list | grep -E 'ntpd|hostd|vpxa|stHypervisorSvc|scvmclient|hxctlvm'"
+                op = execmd(cmd)
+                opd.update({"ESX Services": op})
+            except Exception:
+                pass
+
+            # 8) Check for HX down during upgrade
+            check_HX_down_status = ""
+            try:
+                if esx_version and float(esx_version) >= 6.7:
+                    # ESXi 6.7 and above
+                    cmd = "netdbg vswitch runtime get | grep TeamPolicyUpDelay -A2 | cut -d ':' -f2"
+                    op = execmd(cmd)
                     if op:
-                        smbResult.append(str(op[0]))
-                        rs = cmd + "  " + str(op[0])
-                        smbtest.append(rs)
-            except Exception as eps:
-                log_msg(ERROR, str(eps))
-        log_msg(INFO, "SMB Test:" + str(smbResult))
-        if smbResult:
-            if "False" in smbResult:
-                hvdict[hostip]["SMB Test"] = {"Status": "FAIL", "Result": "\n".join(smbtest)}
+                        v = op[0]
+                        v = v.strip()
+                        if v.isdigit():
+                            if int(v) < 30000:
+                                check_HX_down_status = "FAIL"
+                            else:
+                                check_HX_down_status = "PASS"
+                else:
+                    # ESXi 6.5 and lower
+                    cmd = "esxcli system settings advanced list | grep TeamPolicyUpDelay -A2 | grep Int | cut -d ':' -f2 | cut -d ' ' -f2"
+                    op = execmd(cmd)
+                    if op:
+                        v = op[0]
+                        v = v.strip()
+                        if v.isdigit():
+                            if int(v) < 30000:
+                                check_HX_down_status = "FAIL"
+                            else:
+                                check_HX_down_status = "PASS"
+                opd["Check for ESXI Failback timer"] = check_HX_down_status
+            except Exception:
+                pass
+
+            # 9) vmk1 ping to each SCVM eth1
+            vmk1 = ""
+            mtu = "1472"
+            try:
+                vmk1 = hostd[ip]["vmk1"]
+                mtu = vmk1_mtu[vmk1]["mtu"]
+            except Exception:
+                if esxip in compute_vmk0_list:
+                    vmk1 = esxip
+                    # Get MTU
+                    try:
+                        cmd = "esxcfg-vmknic -l"
+                        op = execmd(cmd)
+                        for line in op:
+                            if vmk1 in line and "IPv4" in line:
+                                if " 1500 " in line:
+                                    mtu = "1472"
+                                elif " 9000 " in line:
+                                    mtu = "8972"
+                    except Exception as e:
+                        log_msg(ERROR, str(e) + "\r")
+            vmkpingchk = []
+            if len(eth1_list) > 0 and vmk1:
+                for k in eth1_list:
+                    try:
+                        cmd = "vmkping -I {} -c 3 -d -s {} -i 0.5 {}".format("vmk1", mtu, k)
+                        op = execmd(cmd)
+                        pst = pingstatus(op)
+                        opd.update({cmd: pst})
+                        vmkpingchk.append(pst)
+                    except Exception:
+                        pass
+
+            # 10) vSwitch info of ESXi
+            try:
+                cmd = "esxcfg-vswitch -l"
+                op = execmd(cmd)
+                cm = "esxcfg-vswitch -l"
+                opd.update({cm: op})
+            except Exception:
+                pass
+
+            # 11) Check extra contoller vm folders
+            vmfld = ""
+            try:
+                cmd = "esxcli hardware platform get | grep -i serial"
+                op = execmd(cmd)
+                srno = ""
+                for line in op:
+                    if line.startswith("Serial Number"):
+                        l = line.split(": ")
+                        try:
+                            srno = l[1]
+                            srno = srno.strip()
+                        except Exception:
+                            pass
+                        break
+                if srno != "":
+                    cmd = "ls /vmfs/volumes/SpringpathDS-" + str(srno.strip())
+                    op = execmd(cmd)
+                    op = [x for x in op if x != ""]
+                    vmfld = "PASS"
+                    #print(len(op))
+                    fcnt = 0
+                    if op:
+                        for line in op:
+                            l = line.split()
+                            for d in l:
+                                if d.startswith("stCtlVM"):
+                                    fcnt += 1
+                    if fcnt > 1:
+                        vmfld = "FAIL" + "\nBug: HX Down"
+                opd.update({"No extra controller vm folders": vmfld})
+            except Exception:
+                pass
+
+            # 12) VMware Tools location check:
+            vmtoolcheck = ""
+            try:
+                cmd = "esxcli system settings advanced list -o /UserVars/ProductLockerLocation | grep -i 'string value'"
+                op = execmd(cmd)
+                svalue = ""
+                dsvalue = ""
+                for line in op:
+                    if line.startswith("String Value"):
+                        svalue = line.split(": ")[1]
+                    elif line.startswith("Default String Value"):
+                        dsvalue = line.split(": ")[1]
+                if svalue != "" and dsvalue != "":
+                    if svalue == dsvalue:
+                        vmtoolcheck = "PASS"
+                    else:
+                        vmtoolcheck = "FAIL"
+                opd.update({"VMware Tools location check": vmtoolcheck})
+            except Exception:
+                pass
+
+            # 13) vfat Disk Usage check
+            vfatcheck = "PASS"
+            try:
+                cmd = "df -h | grep vfat | grep 100%"
+                op = execmd(cmd)
+                for line in op:
+                    if "100%" in line:
+                        vfatcheck = "FAIL"
+                        break
+                opd.update({"vfat Disk Usage check": vfatcheck})
+            except Exception:
+                pass
+
+            # 14) Check /tmp usage
+            tmpUsageCheck = ""
+            try:
+                cmd = "vdf | grep tmp"
+                op = execmd(cmd)
+                for line in op:
+                    if "tmp" in line:
+                        m = re.search(r"\s(\d+)%\s", line)
+                        if m:
+                            usg = m.group(1)
+                            if int(usg) <= 80:
+                                tmpUsageCheck = "PASS"
+                            else:
+                                tmpUsageCheck = "FAIL"
+                opd.update({"Check /tmp usage": tmpUsageCheck})
+            except Exception:
+                pass
+
+            # 15) Micron 5100 Drive Firmware Check
+            mfwcheck = ""
+            micronbug = ""
+            try:
+                cmd = "esxcli storage core device list"
+                op = execmd(cmd)
+
+                mflag1 = mflag2 = 0
+                for line in op:
+                    if "Model:" in line and "Micron_5100" in line:
+                        mflag1 = 1
+                        mflag2 = 0
+                        mfwcheck = "PASS"
+                        continue
+                    elif mflag1 == 1 and "Revision:" in line:
+                        mflag1 = 0
+                        mflag2 = 1
+                    if mflag2 == 1 and "U049" in line:
+                        micronbug = "Please Refer: https://tinyurl.com/vqnytww"
+                        mfwcheck = "FAIL"
+                        break
+                if micronbug != "":
+                    opd.update({"Micron 5100 Drive Firmware Check": micronbug})
+            except Exception:
+                pass
+
+            # 16) Run lsusb when USB0 Check Fails
+            global lsusbCheck
+            if lsusbCheck:
+                try:
+                    cmd = "lsusb"
+                    op = execmd(cmd)
+                except Exception:
+                    pass
+
+            # Update Test Detail
+            nwtestdetail.update({esxip: opd})
+            # Close connection
+            client.close()
+
+            # Test summary
+            # HX User Account check
+            nwtestsum[esxip]["HX User Account check"] = {"Status": hxac, "Result": "Checks if HXUSER is present."}
+            # vMotion enabled check
+            nwtestsum[esxip]["vMotion enabled check"] = {"Status": esx_vmotion[esxip]["vmotion"], "Result": "Checks if vMotion is enabled on the host."}
+            # vMotion reachability check: Removed
+            # Check for HX down during upgrade
+            #nwtestsum[esxip]["Check for HX down during upgrade"] = check_HX_down_status[:4]
+            if check_HX_down_status == "FAIL":
+                nwtestsum[esxip]["Check for ESXI Failback timer"] = {"Status": check_HX_down_status,
+                                                                     "Result": "If Failed, Change the failback timer to 30secs:" + "\na)For ESXi 6.5: 'esxcfg-advcfg -s 30000 /Net/TeamPolicyUpDelay'\nb)For ESXi 6.7: 'netdbg vswitch runtime set TeamPolicyUpDelay 30000'"}
             else:
-                hvdict[hostip]["SMB Test"] = {"Status": "PASS", "Result": "Checking SMB reachability of node."}
-        else:
-            hvdict[hostip]["SMB Test"] = {"Status": "", "Result": "Checking SMB reachability of node."}
+                nwtestsum[esxip]["Check for ESXI Failback timer"] = {"Status": check_HX_down_status, "Result": "Checks for ESXi FAILBACK timer set to 30000ms."}
+            # Check vmk1 ping to eth1
+            if vmkpingchk:
+                if "FAIL" in vmkpingchk:
+                    nwtestsum[esxip]["Check vmk1 ping to eth1"] = {"Status": "FAIL",
+                                                                   "Result": "If Failed, Perform manual vmkping between ESXi vmk1 and SCVM eth1."}
+                else:
+                    nwtestsum[esxip]["Check vmk1 ping to eth1"] = {"Status": "PASS",
+                                                                  "Result": "Checks Network between ESXi vmk1 and SCVM eth1."}
+            # No extra controller vm folders check
+            nwtestsum[esxip]["No extra controller vm folders check"] = {"Status": vmfld[:4], "Result": "Checks for duplicate Controller SCVM Folders."}
+            # VMware Tools location check
+            nwtestsum[esxip]["VMware Tools location check"] = {"Status": vmtoolcheck, "Result": "Checks for Non default VMware Tools location."}
+            # vfat Disk Usage check
+            nwtestsum[esxip]["vfat Disk Usage check"] = {"Status": vfatcheck, "Result": "Checks for vfat Disk Usage."}
+            # Check /tmp usage
+            if tmpUsageCheck == "FAIL":
+                nwtestsum[esxip]["Check /tmp usage"] = {"Status": tmpUsageCheck, "Result": "Please ensure usage of /tmp is less than 80%."}
+            else:
+                nwtestsum[esxip]["Check /tmp usage"] = {"Status": tmpUsageCheck, "Result": "Checking for /tmp usage."}
+            # Micron 5100 Drive Firmware Check
+            if mfwcheck:
+                nwtestsum[esxip]["Micron 5100 Drive Firmware Check"] = {"Status": mfwcheck, "Result": micronbug}
 
-        log_msg(INFO, "Remote HyperV Check Complete:" + str(hostip))
-
-    except Exception as er:
-        log_msg(INFO, "Not able to connect remote Hyper-V host: " + str(hostip))
-        log_msg(INFO, "\r\nInvalid Hyper-V password\r")
-        log_msg(ERROR, str(er))
+    except Exception as e:
+        msg = "\r\nNot able to establish SSH connection to ESX Host: " + esxip + "\r"
+        log_msg(INFO, msg)
+        #log_msg("", msg)
+        log_msg(ERROR, str(e) + "\r")
 
 
 def create_sub_report(ip):
-    log_msg(INFO, "Create HX Report files")
     # create HX controller report file
     global subreportfiles
-    filename = "VHX_Report_" + str(ip) + ".txt"
+    filename = "HX_Report_" + str(ip) +".txt"
     subreportfiles.append(filename)
     with open(filename, "w") as fh:
-        fh.write("\t\t\tVHX Tool " + str(toolversion))
-        fh.write("\n")
+        fh.write("\t\t\t     HX Health Check " + str(toolversion))
+        fh.write("\r\n")
         fh.write("\t\t\tHX Controller: " + ip)
-        fh.write("\n")
+        fh.write("\r\n")
         fh.write("\t\t\tHX Hostname: " + hostd[ip].get("hostname", ""))
-        fh.write("\n")
+        fh.write("\r\n")
         fh.write("#" * 80)
-        fh.write("\n")
+        fh.write("\r\n")
         n = 1
         for cname in testdetail[ip].keys():
-            fh.write("\n" + str(n) + ") " + cname + ":")
-            fh.write("\n")
+            fh.write("\r\n" + str(n) + ") " + cname + ":")
+            fh.write("\r\n")
             tw = PrettyTable(hrules=ALL)
             tw.field_names = ["Name", "Status", "Comments"]
             tw.align = "l"
@@ -1340,145 +1672,217 @@ def create_sub_report(ip):
                     tw.add_row([k, v["Status"], v["Result"]])
                 else:
                     tw.add_row([k, v, ""])
-            fh.write((str(tw)))
-            fh.write("\n")
+            fh.write((str(tw)).replace("\n", "\r\n"))
+            fh.write("\r\n")
             n += 1
 
-    # print("\r\nSub Report File: " + filename)
-    log_msg(INFO, "Sub Report File: " + filename)
+    #print("\r\nSub Report File: " + filename)
+    log_msg(INFO, "Sub Report File: " + filename + "\r")
 
 
-def display_hx_result():
-    log_msg(INFO, "Print the HX Report")
-    # Display the test Summary results
-    print("")
-    for ip in testsum.keys():
-        print("\nHX Controller: " + ip)
-        print("Test Summary:")
-        ts = PrettyTable(hrules=ALL)
-        ts.field_names = ["Name", "Result", "Comments"]
-        ts.align = "l"
-        for k, v in testsum[ip].items():
-            if type(v) == list:
-                ts.add_row([k, "\n".join(v), ""])
-            elif type(v) == dict:
-                ts.add_row([k, v["Status"], v["Result"]])
-            else:
-                ts.add_row([k, v, ""])
-        print(ts)
-        time.sleep(5)
-
-
-def display_hyperv_result():
-    log_msg(INFO, "Print the Hyper-V Report")
-    # Display the detail test results
-    # Test Detail
-    for hip in sorted(hvdict.keys()):
-        print("\nHyper-V Host: " + hip)
-        hct = PrettyTable(hrules=ALL)
-        hct.field_names = ["Name", "Status", "Comments"]
-        hct.align = "l"
-        keys = ["HostName", "Cluster Failover", "Hyper-V Role", "Node State", "Network Interfaces State",
-                "Remote Management Enabled", "MTU for Storage Data Network", "Check the Domain and forest details",
-                "Check host file entries", "Check Adapter details", "Drivers test",
-                "Virtual Machine Management service check", "SMB Test"]
-        for k in keys:
-            try:
-                if type(hvdict[hip][k]) == list:
-                    hct.add_row([k, "\n".join(hvdict[hip][k]), ""])
-                elif type(hvdict[hip][k]) == dict:
-                    hct.add_row([k, hvdict[hip][k]["Status"], hvdict[hip][k]["Result"]])
-                else:
-                    hct.add_row([k, hvdict[hip].get(k, ""), ""])
-            except Exception:
-                continue
-        print(hct)
-        time.sleep(5)
-
-
-def create_main_report(clustername):
-    log_msg(INFO, "Create the Main Report file")
-    # create main report file
-    if clustername.strip() != "":
-        filename = "VHX_Tool_Main_Report_" + get_date_time() + "_" + str(clustername.strip()) + ".txt"
-    else:
-        filename = "VHX_Tool_Main_Report_" + get_date_time() + ".txt"
-    with open(filename, "w") as fh:
-        fh.write("\t\t\tVHX Tool " + str(toolversion))
-        fh.write("\n")
-        fh.write("\t\t\tVHX Tool Main Report:")
-        fh.write("\n")
-        fh.write("#" * 80)
-        fh.write("\n")
-        fh.write("\nActive Directory installed on Physical (bare metal) in your Environment: " + str(adInfo))
-        fh.write("\n")
-        fh.write("\nSMB Share Name: " + smbName)
-        fh.write("\n")
-        fh.write("\nHX Cluster Nodes:")
-        fh.write("\n")
-        fh.write((str(ht)))
-        fh.write("\n\n")
-
-    for sfile in subreportfiles:
-        with open(sfile, "r") as fh:
-            content = fh.read()
-        with open(filename, "a") as fh:
-            fh.write("\n")
-            fh.write("#" * 80)
-            fh.write("\n")
-            fh.write(content)
-    with open(filename, "a") as fh:
-        fh.write("\n")
-        fh.write("#" * 80)
-        fh.write("\n\t\t\t Network check:")
-        fh.write("\n")
-        fh.write("#" * 80)
-        fh.write("\n")
-        fh.write("Hyper-V Clusters: " + ", ".join(hypervlist))
-        fh.write("\n")
-        for hip in sorted(hvdict.keys()):
-            fh.write("\nHyper-V Host: " + hip)
-            hct = PrettyTable(hrules=ALL)
-            hct.field_names = ["Name", "Status", "Comments"]
-            hct.align = "l"
-            keys = ["HostName", "Cluster Failover", "Hyper-V Role", "SMB1 Enabled", "SMB2 Enabled", "Check Node State",
-                    "Check Network Interfaces State", "Remote Management Enabled", "Check MTU for Storage Data Network",
-                    "Check the Domain and forest details", "Check host file entries", "Check Adapter details",
-                    "Check the status minifilter driver", "Virtual Machine Management service check", "SMB Test"]
-            for k in keys:
-                try:
-                    if type(hvdict[hip][k]) == list:
-                        hct.add_row([k, "\n".join(hvdict[hip][k]), ""])
-                    elif type(hvdict[hip][k]) == dict:
-                        hct.add_row([k, hvdict[hip][k]["Status"], hvdict[hip][k]["Result"]])
+def display_result():
+    # Display the test results
+    if arg == "detail":
+        print("")
+        for ip in testdetail.keys():
+            print("\r\n\t\t\tHX Controller: " + ip)
+            print("#"*80)
+            n = 1
+            for cname in testdetail[ip].keys():
+                print("\r\n" + str(n) + ") " + cname)
+                td = PrettyTable(hrules=ALL)
+                td.field_names = ["Name", "Status", "Comments"]
+                td.align = "l"
+                for k, v in testdetail[ip][cname].items():
+                    if type(v) == list:
+                        td.add_row([k, "\n".join(v), ""])
+                    elif type(v) == dict:
+                        td.add_row([k, v["Status"], v["Result"]])
                     else:
-                        hct.add_row([k, hvdict[hip].get(k, ""), ""])
-                except Exception:
-                    continue
-            fh.write("\n")
-            fh.write(str(hct))
-            fh.write("\n")
-        fh.write("\n")
-        fh.write("\nRelease Notes:")
-        fh.write("\nhttps://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-release-notes-list.html")
-        fh.write("\n\nUpgrade Guides:")
-        fh.write("\nhttps://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-installation-guides-list.html")
-        fh.write("\n\nNote:")
-        fh.write("\n1) Hypercheck doesnot perform FAILOVER TEST, so please ensure that the upstream is configured for network connectivity for JUMBO or NORMAL MTU size as needed.")
-        fh.write("\n")
+                        td.add_row([k, v, ""])
+                print(td)
+                time.sleep(5)
+                n += 1
+        print("\r\n" + "#" * 80)
+        print("\r\t\t\tNetwork check:")
+        print("\r" + "#" * 80)
+        print("\r\nESX vmk0: " + ", ".join(esx_hostsl) + "\r")
+        print("\r\nESX vmk1: " + ", ".join(vmk1_list) + "\r")
+        print("\r\nSCVM eth0: " + ", ".join(eth0_list) + "\r")
+        print("\r\nSCVM eth1: " + ", ".join(eth1_list) + "\r")
+        for eip in nwtestdetail.keys():
+            print("\r\nESX Host: " + eip)
+            ed = PrettyTable(hrules=ALL)
+            ed.field_names = ["Command/Condition", "Response/Status", "Comments"]
+            ed.align = "l"
+            for k, v in nwtestdetail[eip].items():
+                if type(v) == list:
+                    ed.add_row([k, "\n".join(v), ""])
+                elif type(v) == dict:
+                    ed.add_row([k, v["Status"], v["Result"]])
+                else:
+                    ed.add_row([k, v, ""])
+            print(ed)
+            time.sleep(5)
+        # Bug details table
+        print("\n\nBugs Detail:")
+        print(bgt)
+        time.sleep(5)
+    else:
+        print("")
+        for ip in testsum.keys():
+            print("\r\nHX Controller: " + ip)
+            print("\rTest Summary:")
+            ts = PrettyTable(hrules=ALL)
+            ts.field_names = ["Name", "Result", "Comments"]
+            ts.align = "l"
+            for k, v in testsum[ip].items():
+                if type(v) == list:
+                    ts.add_row([k, "\n".join(v), ""])
+                elif type(v) == dict:
+                    ts.add_row([k, v["Status"], v["Result"]])
+                else:
+                    ts.add_row([k, v, ""])
+            print(ts)
+        print("\r\n" + "#" * 80)
+        print("\r\t\t\tNetwork check:")
+        print("\r" + "#" * 80)
+        print("\r\nESX vmk0: " + ", ".join(esx_hostsl) + "\r")
+        print("\r\nESX vmk1: " + ", ".join(vmk1_list) + "\r")
+        print("\r\nSCVM eth0: " + ", ".join(eth0_list) + "\r")
+        print("\r\nSCVM eth1: " + ", ".join(eth1_list) + "\r")
+        for eip in nwtestsum.keys():
+            print("\r\nESX Host: " + eip)
+            es = PrettyTable(hrules=ALL)
+            es.field_names = ["Name", "Result", "Comments"]
+            es.align = "l"
+            for k, v in nwtestsum[eip].items():
+                if type(v) == list:
+                    es.add_row([k, "\n".join(v), ""])
+                elif type(v) == dict:
+                    es.add_row([k, v["Status"], v["Result"]])
+                else:
+                    es.add_row([k, v, ""])
+            print(es)
 
-    log_msg(INFO, "Main Report file: " + filename)
-    print("\nMain Report File: " + filename)
+
+def create_main_report(clusterName, clusterType):
+    global sedflag
+    # create main report file
+    filename = "HX_Tool_Main_Report_" + get_date_time() + ".txt"
+    with open(filename, "w") as fh:
+        fh.write("\t\t\tHX Health Check " + str(toolversion))
+        fh.write("\r\n")
+        fh.write("\t\t\t:HX Tool Main Report:")
+        fh.write("\r\n")
+        fh.write("#" * 80)
+        fh.write("\r\n")
+        fh.write("\r\nCluster Name: " + str(clusterName.strip()))
+        fh.write("\r\n")
+        fh.write("\r\nCluster Type: " + str(clusterType.strip()).upper())
+        fh.write("\r\n")
+        fh.write("\r\nHX Cluster Nodes:")
+        fh.write("\r\n")
+        fh.write((str(ht)).replace("\n", "\r\n"))
+        fh.write("\r\n")
+        fh.write("\r\n")
+
+        # Each HX Node Report
+        for ip in hxips:
+            fh.write("\r\n")
+            fh.write("#" * 80)
+            fh.write("\r\n")
+            fh.write("\t\t\tHX Controller: " + ip)
+            fh.write("\r\n")
+            fh.write("\t\t\tHX Hostname: " + hostd[ip].get("hostname", ""))
+            fh.write("\r\n")
+            fh.write("#" * 80)
+            fh.write("\r\n")
+            n = 1
+            for cname in testdetail[ip].keys():
+                fh.write("\r\n" + str(n) + ") " + cname + ":")
+                fh.write("\r\n")
+                tw = PrettyTable(hrules=ALL)
+                tw.field_names = ["Name", "Status", "Comments"]
+                tw.align = "l"
+                for k, v in testdetail[ip][cname].items():
+                    if type(v) == list:
+                        tw.add_row([k, "\n".join(v), ""])
+                    elif type(v) == dict:
+                        tw.add_row([k, v["Status"], v["Result"]])
+                    else:
+                        tw.add_row([k, v, ""])
+                fh.write((str(tw)).replace("\n", "\r\n"))
+                fh.write("\r\n")
+                n += 1
+
+    with open(filename, "a") as fh:
+        fh.write("\r\n")
+        fh.write("#" * 80)
+        fh.write("\r\n")
+        fh.write("\r\n\t\t\t Network check:" + "\r")
+        fh.write("\r\n")
+        fh.write("#" * 80)
+        fh.write("\r\n")
+        fh.write("vmk0: " + ", ".join(esx_hostsl))
+        fh.write("\r\n")
+        fh.write("vmk1: " + ", ".join(vmk1_list))
+        fh.write("\r\n")
+        fh.write("eth0: " + ", ".join(eth0_list))
+        fh.write("\r\n")
+        fh.write("eth1: " + ", ".join(eth1_list))
+        fh.write("\r\n")
+        for host in sorted(nwtestdetail.keys()):
+            fh.write("\r\nESX Host: " + host + "\r")
+            t4 = PrettyTable(hrules=ALL)
+            t4.field_names = ["Command", "Response", "Comments"]
+            t4.align = "l"
+            for k, v in nwtestdetail[host].items():
+                if type(v) == list:
+                    t4.add_row([k, "\n".join(v), ""])
+                else:
+                    t4.add_row([k, v, ""])
+            fh.write("\r\n")
+            fh.write((str(t4)).replace("\n", "\r\n"))
+            fh.write("\r\n")
+        fh.write("\r\n")
+        fh.write("\r\nRelease Notes:" + "\r\n")
+        fh.write("https://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-release-notes-list.html" + "\r\n")
+        fh.write("\r\nUpgrade Guides:" + "\r\n")
+        fh.write("https://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-installation-guides-list.html" + "\r\n")
+        fh.write("\r\n")
+        fh.write("\r\nNote:" + "\r\n")
+        fh.write("1) If upgrading to HX 4.0(2a), please review the following link and perform workaround – https://tinyurl.com/wc7j5qp" + "\r\n")
+        fh.write("2) Please check the status of Compute nodes manually, script only verifies the config on the converged nodes." + "\r\n")
+        fh.write("3) Hypercheck doesnot perform FAILOVER TEST, so please ensure that the upstream is configured for network connectivity for JUMBO or NORMAL MTU size as needed." + "\r\n")
+        if sedNote:
+            fh.write("4) SED Drive Failure Might Cause Cluster to Go Down -  https://www.cisco.com/c/en/us/support/docs/field-notices/702/fn70234.html" + "\r\n")
+        fh.write("\r\n")
+    print("\r\nMain Report File: " + filename)
     log_stop()
     create_tar_file()
-    print("\nRelease Notes:")
-    print("https://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-release-notes-list.html")
-    print("\nUpgrade Guides:")
-    print("https://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-installation-guides-list.html")
-    print("\nNote:")
-    print("1) Hypercheck doesnot perform FAILOVER TEST, so please ensure that the upstream is configured for network connectivity for JUMBO or NORMAL MTU size as needed.")
-    print("\n")
+    print("\r\nRelease Notes:")
+    print("\rhttps://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-release-notes-list.html")
+    print("\r\nUpgrade Guides:")
+    print("\rhttps://www.cisco.com/c/en/us/support/hyperconverged-systems/hyperflex-hx-data-platform-software/products-installation-guides-list.html")
+    print("\r\nNote:")
+    print("\r1) If upgrading to HX 4.0(2a), please review the following link and perform workaround – https://tinyurl.com/wc7j5qp")
+    print("\r2) Please check the status of Compute nodes manually, script only verifies the config on the converged nodes.")
+    print("\r3) Hypercheck doesnot perform FAILOVER TEST, so please ensure that the upstream is configured for network connectivity for JUMBO or NORMAL MTU size as needed.")
+    if sedNote:
+        print("\r4) SED Drive Failure Might Cause Cluster to Go Down -  https://www.cisco.com/c/en/us/support/docs/field-notices/702/fn70234.html")
+    print("\r\n")
 
+
+def create_json_file(clusterName, clusterType):
+    filename = "HX_Tool_Summary.json"
+    data = {}
+    data["Cluster Name"] = str(clusterName.strip())
+    data["Cluster Type"] = str(clusterType.strip())
+    data["HX Checks"] = testsum
+    data["NW Checks"] = nwtestsum
+    with open(filename, "w") as fh:
+        json.dump(data, fh)
 
 def create_tar_file():
     file = dir_name + ".tar"
@@ -1494,7 +1898,6 @@ def create_tar_file():
         print("Report file copied to path: /var/log/springpath")
     except Exception as e:
         print("Not able to create the Report tar file")
-        log_msg(INFO, str(e))
         print(e)
 
 
@@ -1502,7 +1905,8 @@ def create_tar_file():
 # Main Starts here
 ###############################################################################
 if __name__ == "__main__":
-    # VHXTool
+    # HX Script version
+
     # Arguments passed
     arg = ""
     if len(sys.argv) > 1:
@@ -1511,45 +1915,45 @@ if __name__ == "__main__":
         except Exception:
             pass
     if arg == "-h" or arg == "--help" or arg == "help":
-        print("\n\t\t VHX Tool " + str(toolversion))
-        print("\nSupported HX Versions: 3.0, 3.5, 4.0")
-        print("\nPre-requisite: Script needs Hyper-V Admin username and password and HX root password information to check all conditions.")
-        print("\nVHX Health Check script will do below checks on each cluster nodes:")
-        print("\t 1) HX Cluster services check")
-        print("\t 2) HX ZooKeeper & Exhibitor check")
-        print("\t 3) HX HDD health check")
-        print("\t 4) HX Pre-Upgrade Check")
-        print("\t 5) Hyper-V check ")
+        print("\n\t\t HX Health Check " + str(toolversion))
+        print("\nSupported HX Versions: 1.8, 2.6, 3.0, 3.5, 4.0")
+        print("\nPre-requisite: Script needs HX and ESXi root password information to check all conditions.")
+        print("\nHX Health Check script will do below checks on each cluster nodes:")
+        print("\t 1) Cluster services check")
+        print("\t 2) ZooKeeper & Exhibitor check")
+        print("\t 3) HDD health check")
+        print("\t 4) Pre-Upgrade Check")
+        print("\t 5) Network check ")
         print("\nFor Test Summary report run as below:")
-        print("\t python VHXTool.py")
+        print("\t python HXTool.py")
+        print("\nFor Test detail report run as below:")
+        print("\t python HXTool.py detail\n")
         sys.exit(0)
 
     # Log file declaration
-    log_file = "VHXTool_" + get_date_time() + ".log"
-    log_name = "VHXTOOL"
+    log_file = "HX_Tool_" + get_date_time() + ".log"
+    log_name = "HX_TOOL"
     log_start(log_file, log_name, INFO)
 
-    print("\n\t\t VHX Tool " + str(toolversion))
-    log_msg(INFO, "VHX Tool version: " + str(toolversion))
-    log_msg(INFO, "VHX Tool Build Date: " + str(builddate))
+    # RSA_KEY_FILE = "/etc/ssh/ssh_host_rsa_key"
 
+    print("\n\t\t HX Health Check " + str(toolversion))
+    log_msg(INFO, "HX Health Check " + str(toolversion) + "\r")
+    hxcdt = datetime.datetime.now()
+    bdt = datetime.datetime.strptime(builddate, "%Y-%m-%d")
+    ndays = (hxcdt - bdt).days
+    if int(ndays) >= 30:
+        print("\n    The script in use might be old. Please check and confirm that this is the latest script on Github.")
     # HX Controller parameter
-    print("\nPlease enter below info of Hyper-V Cluster:")
-    wdusername = raw_input("\nEnter the Hyper-V Username(Ex: Domain\Username): ")
-    log_msg(INFO, "Hyper-V Username: " + wdusername)
-    wdpassword = getpass.getpass("Enter the Hyper-V Password: ")
+    print("\nPlease enter below info of HX-Cluster:")
     hxusername = "root"
-    log_msg(INFO, "HX Username: " + hxusername)
-    hxpassword = getpass.getpass("\nEnter the HX-Cluster Root Password: ")
+    log_msg(INFO, "Username: " + hxusername + "\r")
+    hxpassword = getpass.getpass("Enter the HX-Cluster Root Password: ")
+    esxpassword = getpass.getpass("Enter the ESX Root Password: ")
     port = 22
-    log_msg(INFO, "Port: " + str(port))
+    log_msg(INFO, "Port: " + str(port) + "\r")
     time_out = 30  # Number of seconds for timeout
-    log_msg(INFO, "Timeout: " + str(time_out))
-
-    # Ask Active Directory info
-    adInfo = raw_input("\nIs the Active Directory installed on Physical (bare metal) in your Environment (Enter Yes/No): ")
-    print("Note: Please be aware that all Active Directory Servers/ DNS Servers should not be nested in Hyperflex datastore virtual machines. There should always be physical (bare metal) ADs in your environment.")
-
+    log_msg(INFO, "Timeout: " + str(time_out) + "\r")
     # Get Host IP Address of eth1
     # cmd = "hostname -i"
     cmd = "ifconfig eth1 | grep 'inet addr:' | cut -d: -f2| cut -d' ' -f1"
@@ -1568,131 +1972,83 @@ if __name__ == "__main__":
     # Get Cluster Name
     print("")
     clustername = ""
-    #cmd = "stcli cluster storage-summary --detail | grep -i name | cut -d: -f2"
-    cmd = """stcli cluster storage-summary --detail | egrep  '"name":' | cut -d: -f2"""
+    clusterType = ""
+    cmd = "stcli cluster storage-summary --detail | grep -i name | cut -d: -f2"
     op = runcmd(cmd)
-    if op:
-        m = re.search(r"\"(.+)\"", op)
-        if m:
-            clustername = m.group(1)
+    if "Not able to run the command" in op:
+        pass
+    else:
+        clustername = op.strip()
     log_msg(INFO, "Cluster Name: " + str(clustername) + "\r")
-    #log_msg("", "Cluster Name: " + str(clustername) + "\r")
+    log_msg("", "Cluster Name: " + str(clustername) + "\r")
 
     # Get Cluster Type
-    clusterType = ""
-    cmd = "sysmtool --ns cluster --cmd info | grep -i 'Cluster Type:'"
+    cmd = "stcli cluster info | grep -i clustertype | head -1 | cut -d: -f2"
+    op = runcmd(cmd)
+    if op:
+        clusterType = op.strip()
+
+    # Check Stretch Cluster
+    stcnt = ""
+    cmd = "find / -name stretch* | wc -l"
     cop = runcmd(cmd)
-    if cop:
-        if ":" in cop:
-            m = cop.strip().split(":")
-            try:
-                clusterType = m[1].strip()
-            except KeyError:
-                pass
+    if "Not able to run the command" in cop:
+        pass
+    else:
+        stcnt = cop.strip()
+        if stcnt.isdigit():
+            if int(stcnt) > 0:
+                clusterType = "STRETCH_CLUSTER"
     log_msg(INFO, "Cluster Type: " + str(clusterType) + "\r")
-    #log_msg("", "Cluster Type: " + str(clusterType) + "\r")
+    if clusterType:
+        print("")
+        log_msg("", "Cluster Type: " + str(clusterType).upper() + "\r")
+    # Set Stretch Cluster
+    stretchCluster = False
+    if "stretch" in clusterType.lower():
+        stretchCluster = True
 
-    smbName = ""
-    hvdict = {}
-    hostd = {}
-    hxips = []
-    hxhv = {}
-    hxeth1_list = []
-    hypervlist = []
-    datastorelist = []
-    subreportfiles = []
-
-    print("")
     # Get Controller Mgmnt IP Addresses
+    # Old cmd used to get controller IP Addresses
+    # cmd1 = "stcli cluster info | grep -i  stctl_mgmt -n1 | grep -i addr"
     # Get eth1 ips
-    # eth0: managementip
-    # eth1: dataip
     cmd = "sysmtool --ns cluster --cmd info | grep -i uuid"
     op = runcmd(cmd)
     ips = []
     if op:
         ips = re.findall(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", op)
     if not ips:
-        print("HX Nodes IP Addresses are not found, quitting.")
+        print("HX Nodes IP Addresses are not found")
         sys_exit(0)
     ips.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
-    log_msg(INFO, "Eth1 IP Adresses: " + ", ".join(ips) + "\r")
-    hxeth1_list = list(set(ips))
-    hxeth1_list.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
-    log_msg(INFO, "HX IP Adresses: " + ", ".join(hxeth1_list))
+    log_msg(INFO, "IP Adresses: " + ", ".join(ips) + "\r")
+    eth1_list = list(ips)
+    eth1_list.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
 
-    # Get DataStore List
-    cmd = "hxcli datastore list"
-    op = runcmd(cmd)
-    opl = op.split("\n")
-    for line in opl:
-        line = check(line)
-        if "+---" in line or "NAME" in line:
-            continue
-        elif "|" in line:
-            l = line.split("|")
-            if l:
-                d = l[1].strip()
-                datastorelist.append(str(d))
-    log_msg(INFO, "Datastore List: " + str(datastorelist))
-
-    # Get SMB Name or Cluster Name
-    cmd = 'hxcli cluster info | egrep "Cluster Name"'
-    op = runcmd(cmd)
-    if op:
-        if ":" in op:
-            m = op.strip().split(":")
-            if m:
-                try:
-                    smbName = m[1].strip()
-                except KeyError:
-                    pass
-    log_msg(INFO, "SMB Name: " + str(smbName))
-    log_msg("", "SMB Name: " + str(smbName))
-
-    # Get Hyper-V IP Addresses
-    try:
-        with open("/etc/springpath/secure/hxinstall_inventory.json", "r") as fh:
-            jdata = json.load(fh)
-        for d in jdata["hxvms"]:
-            ip = str(d.get("managementip", ""))
-            huid = str(d.get("hostuuid", ""))
-            if ip:
-                hxhv[ip] = {}
-                hxhv[ip]["uuid"] = huid
-        for d in jdata['hosts']:
-            ip = str(d.get("managementip", ""))
-            uid = str(d.get("uuid", ""))
-            hypervlist.append(ip)
-            for k in hxhv.keys():
-                if hxhv[k]["uuid"] == uid:
-                    hxhv[k]["hyperv"] = ip
-    except Exception:
-        pass
-    hypervlist = map(str, hypervlist)
-    hypervlist.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
-    log_msg(INFO, "Hyper-V IP Adresses: " + ", ".join(hypervlist))
-
-    # Verify Hyper-V Password
-    if hypervlist:
-        check_hyperv_psd(hypervlist, wdusername, wdpassword)
-
+    # Get all hostnames
+    hostd = {}
+    subreportfiles = []
     print("")
+    # global sedflag
+
     #############################################################
+    # Get Controller eth0 ips or storage controller ips
+    hxips = []
+    eth0_list = []
     # Create instance of SSHClient object
     client = paramiko.SSHClient()
 
     # Automatically add untrusted hosts (Handle SSH Exception for unknown host)
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    # Verify HX root Password
-    check_hx_psd(hxeth1_list[0], hxusername, hxpassword, time_out)
+    # Check HX and ESX root Password
+    check_psd(ips, hxusername, hxpassword, esxpassword, time_out)
 
     # Get all hostnames and HX IP address using threads
     # <hostname -i> cmd is not working
     try:
         ipthreads = []
-        for ip in hxeth1_list:
+        for ip in ips:
             th = threading.Thread(target=thread_geteth0ip, args=(ip, hxusername, hxpassword, time_out,))
             th.start()
             time.sleep(12)
@@ -1703,25 +2059,27 @@ if __name__ == "__main__":
 
         hxips.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
     except Exception:
-        hxips = hxeth1_list
+        hxips = eth1_list
+    hxips = eth1_list
+    log_msg(INFO, "HX IP Adresses: " + ", ".join(hxips) + "\r")
 
-    log_msg(INFO, "HX IP Adresses: " + ", ".join(hxips))
+    #############################################################
+    # Create instance of SSHClient object
+    client = paramiko.SSHClient()
+
+    # Automatically add untrusted hosts (Handle SSH Exception for unknown host)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     # Get hostname, eth1, esxip using threads
     threads = []
     for ip in hxips:
         th = threading.Thread(target=thread_sshconnect, args=(ip, hxusername, hxpassword, time_out,))
         th.start()
-        time.sleep(30)
+        time.sleep(35)
         threads.append(th)
 
     for t in threads:
         t.join()
-
-    # Update Hyper-V IP Address
-    for k in hostd.keys():
-        if k in hxhv.keys():
-            hostd[k]["hyperv"] = hxhv[k]["hyperv"]
 
     # Get all timestamp using threads
     tsthreads = []
@@ -1736,15 +2094,14 @@ if __name__ == "__main__":
         t.join()
     tsend = datetime.datetime.now().replace(microsecond=0)
     timedelay = (tsend - tsstart).seconds
-    log_msg(INFO, "Time delay for Timestamp check: " + str(timedelay))
+    log_msg(INFO, "Time delay for Timestamp check: " + str(timedelay) + "\r")
 
-    # Print the Nodes Table
     ht = PrettyTable(hrules=ALL)
-    ht.field_names = ["Nodes", "Eth0 IP Address", "HostName", "Eth1 IP Address", "Eth1 MTU", "Cluster Mgmt IP", "Cluster Data IP", "CRM Master"]
+    ht.field_names = ["Nodes", "IP Address", "HostName"]
     ht.align = "l"
     for i, ip in enumerate(hxips):
-        ht.add_row([i + 1, ip, hostd[ip].get("hostname", ""), hostd[ip].get("eth1", ""), hostd[ip].get("eth1mtu", ""), hostd[ip].get("cmip", ""), hostd[ip].get("cdip", ""), hostd[ip].get("crmaster", "")])
-    print("\nHX Cluster Nodes:")
+        ht.add_row([i + 1, hostd[ip].get("eth0", ""), hostd[ip].get("hostname", "")])
+    print("\r\nHX Cluster Nodes:")
     print(ht)
     print("")
 
@@ -1887,6 +2244,58 @@ if __name__ == "__main__":
     for ip in hostd.keys():
         hostd[ip]["check iptables"] = iptst
 
+    # Check keystore file
+    keystoreCheck = ""
+    keystoreList = []
+    for ip in hostd.keys():
+        keystore = hostd[ip]["keystore"]
+        if keystore not in keystoreList:
+            keystoreList.append(keystore)
+    if len(keystoreList) == 1:
+        keystoreCheck = "PASS"
+    else:
+        keystoreCheck = "FAIL"
+    for ip in hostd.keys():
+        hostd[ip]["check keystore"] = keystoreCheck
+
+    # Get ESX IPs, vmk1 ips
+    esx_hostsl = []
+    for ip in hostd.keys():
+        esxip = hostd[ip].get("esxip", "")
+        if esxip != "":
+            esx_hostsl.append(esxip)
+    if esx_hostsl:
+        try:
+            esx_hostsl.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
+        except Exception:
+            pass
+    esx_vmotion = {}
+    vmk1_mtu = {}
+    vmk1_list = []
+    for ip in esx_hostsl:
+        esx_vmotion[str(ip)] = dict.fromkeys(["vmotion", "vmkip", "mtu"], "")
+
+    # Get all vmk1 using threads
+    threads = []
+    for ip in hostd.keys():
+        th = threading.Thread(target=get_vmk1, args=(ip, hxusername, esxpassword, time_out,))
+        th.start()
+        time.sleep(5)
+        threads.append(th)
+
+    for t in threads:
+        t.join()
+
+    vmk1_list = [v for v in vmk1_list if v != " "]
+    if vmk1_list:
+        try:
+            vmk1_list.sort(key=lambda ip: map(int, reversed(ip.split('.'))))
+        except Exception:
+            pass
+    log_msg(INFO, "Eth1 IP Adresses: " + ", ".join(eth1_list) + "\r")
+    log_msg(INFO, "ESX IP Adresses: " + ", ".join(esx_hostsl) + "\r")
+    log_msg(INFO, "vmk1 IP Adresses: " + ", ".join(vmk1_list) + "\r")
+
     # Check the below things on each controller
     nwdetail = OrderedDict()
     cvm = {}
@@ -1894,16 +2303,26 @@ if __name__ == "__main__":
     testdetail = OrderedDict()
     nwtestsum = OrderedDict()
     nwtestdetail = OrderedDict()
+    # Bug details table
+    bugs = {
+        "HX down": "HX cluster goes down during the UCS infra upgrade. This is because of the default failback delay interval(10sec) on ESXi." + "\nDefault Value - 10sec" + "\nModify to - 30sec"
+    }
+
+    bgt = PrettyTable(hrules=ALL)
+    bgt.field_names = ["Bug", "Description"]
+    bgt.align = "l"
+    for k, v in bugs.items():
+        bgt.add_row([k, v])
 
     #############################################################
     # Check on all HX Controller
     # Create instance of SSHClient object
     for ip in hxips:
         try:
-            print("\nHX Controller: " + str(ip))
+            print("\r\nHX Controller: " + str(ip))
             # Initiate SSH Connection
             client.connect(hostname=ip, username=hxusername, password=hxpassword, timeout=time_out)
-            msg = "\nSSH connection established to HX Node: " + ip
+            msg = "\r\nSSH connection established to HX Node: " + ip + "\r"
             log_msg(INFO, msg)
             # log_msg("", msg)
             testsum[ip] = OrderedDict()
@@ -1913,89 +2332,83 @@ if __name__ == "__main__":
             # Progressbar
             pbar = ProgressBarThread()
             pbar.start("Cluster services check     ")
-            log_msg(INFO, "Progressbar Started")
+            log_msg(INFO, "Progressbar Started" + "\r")
             cluster_services_check(ip)
             # stop progressbar
-            pbar.stop("COMPLETE")
-            log_msg(INFO, "Progressbar Stopped")
+            pbar.stop("COMPLETED")
+            log_msg(INFO, "Progressbar Stopped" + "\r")
 
             # 2. ZooKeeper and Exhibitor check
             # Progressbar
             pbar = ProgressBarThread()
             pbar.start("ZooKeeper & Exhibitor check")
-            log_msg(INFO, "Progressbar Started")
+            log_msg(INFO, "Progressbar Started" + "\r")
             zookeeper_check(ip)
             # stop progressbar
-            pbar.stop("COMPLETE")
-            log_msg(INFO, "Progressbar Stopped")
+            pbar.stop("COMPLETED")
+            log_msg(INFO, "Progressbar Stopped" + "\r")
 
             # 3. HDD health check
             # Progressbar
             pbar = ProgressBarThread()
             pbar.start("HDD health check           ")
-            log_msg(INFO, "Progressbar Started")
+            log_msg(INFO, "Progressbar Started" + "\r")
             hdd_check(ip)
             # stop progressbar
-            pbar.stop("COMPLETE")
-            log_msg(INFO, "Progressbar Stopped")
+            pbar.stop("COMPLETED")
+            log_msg(INFO, "Progressbar Stopped" + "\r")
 
             # 4. Pre-Upgrade Check
             # Progressbar
             pbar = ProgressBarThread()
             pbar.start("Pre-Upgrade Check          ")
-            log_msg(INFO, "Progressbar Started")
+            log_msg(INFO, "Progressbar Started" + "\r")
             pre_upgrade_check(ip)
             # stop progressbar
-            pbar.stop("COMPLETE")
-            log_msg(INFO, "Progressbar Stopped")
+            pbar.stop("COMPLETED")
+            log_msg(INFO, "Progressbar Stopped" + "\r")
 
-            # 5. HyperV check
+            # 5. Network Summary
             # Progressbar
+
             pbar = ProgressBarThread()
-            pbar.start("Hyper-V check              ")
+            pbar.start("Network check              ")
             log_msg(INFO, "Progressbar Started" + "\r")
-            hyperv_check(ip)
+            network_check(ip)
             # stop progressbar
-            pbar.stop("COMPLETE")
+            pbar.stop("COMPLETED")
             log_msg(INFO, "Progressbar Stopped" + "\r")
 
             # Close connection
             client.close()
 
             # Create report file
-            create_sub_report(ip)
+            #create_sub_report(ip)
 
         except KeyboardInterrupt:
             sys_exit(0)
 
         except Exception as e:
-            msg = "\nNot able to establish SSH connection to HX Node: " + ip
+            msg = "\r\nNot able to establish SSH connection to HX Node: " + ip + "\r"
             log_msg(INFO, msg)
             # log_msg("", msg)
-            log_msg(ERROR, str(e))
+            log_msg(ERROR, str(e) + "\r")
             # sys_exit(0)
             # stop progressbar
             pbar.stop("INCOMPLETE")
-            log_msg(INFO, "Progressbar Stopped")
+            log_msg(INFO, "Progressbar Stopped" + "\r")
             continue
 
     ###############################################################
-    # Display the HX test result
-    display_hx_result()
 
-    # Hyper-V Check
-    print("")
-    print("\n" + "#" * 80)
-    print("\t\t\tHyper-V check:")
-    print("\r" + "#" * 80)
-    print("\nHyper-V Clusters: " + ", ".join(hypervlist))
-    print("")
+    # Display the test result
+    display_result()
 
-    # Display the Hyper-V test result
-    display_hyperv_result()
+    # Create Test Summary json file
+    create_json_file(clustername, clusterType)
 
-    # Print Report to file
-    create_main_report(clustername)
+    # Create Main Report File
+    create_main_report(clustername, clusterType)
 
     # End
     sys.exit(0)
